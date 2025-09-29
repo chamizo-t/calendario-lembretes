@@ -115,30 +115,31 @@ st.markdown(
     
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
 
-    /* Número do dia - NOVO: Canto Superior Esquerdo */
+    /* Número do dia - NOVO: Centralizado no topo */
     .day-number-container {
-        position: absolute; /* Posição absoluta dentro do wrapper */
-        top: 0px; 
-        left: 0px;
+        position: absolute; 
+        top: 4px; /* Ajuste para o padding interno */
+        left: 50%;
+        transform: translateX(-50%); /* Centraliza horizontalmente */
         font-weight: bold;
         font-size: 14px; 
         color: #1f2937;
-        padding: 4px 6px; 
+        padding: 0; 
         line-height: 1.4;
         z-index: 2;
+        width: auto;
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
     /* Indicador de dia de hoje */
     .today-style .day-number-container > span {
         color: #4b89dc !important;
-        /* Remove o círculo azul, deixando só o número */
     }
 
-    /* --- FAIXA DE EVENTO (NOVO) --- */
+    /* --- FAIXA DE EVENTO --- */
     .reminder-strip {
         position: absolute;
-        bottom: 25px; /* Posição acima do botão Detalhes */
+        bottom: 30px; /* Posição acima do botão Detalhes */
         left: 0;
         width: 100%;
         height: 20px; 
@@ -153,7 +154,7 @@ st.markdown(
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-        z-index: 3; /* Acima do wrapper */
+        z-index: 3; 
     }
     .reminder-strip-title {
         white-space: nowrap;
@@ -162,16 +163,19 @@ st.markdown(
         max-width: 95%;
     }
     
-    /* --- BOTÃO DETALHES (NOVO) --- */
+    /* --- BOTÃO DETALHES (AJUSTADO) --- */
     /* Container do botão st.button */
     .day-cell-wrapper div[data-testid="stButton"] {
         position: absolute;
         bottom: 0px;
-        left: 0;
-        width: 100%;
+        left: 50%; /* Começa no meio */
+        transform: translateX(-50%); /* Centraliza */
+        width: 90%; /* Limita a largura para caber com padding */
         margin: 0 !important;
-        padding: 0 4px 4px 4px; /* Padding apenas em cima e nas laterais */
+        padding: 4px 0px 4px 0px; /* Ajusta o padding para a centralização */
         z-index: 4;
+        display: flex; /* Garante que o botão fique centralizado no contêiner */
+        justify-content: center;
     }
     
     /* Botão em si */
@@ -184,9 +188,11 @@ st.markdown(
         color: #333 !important; 
         border: 1px solid #ccc !important;
         transition: all 0.2s;
-        height: 20px; 
+        height: 22px; /* Aumentado ligeiramente para melhor clique */
         line-height: 1;
-        width: 100%;
+        width: 100%; /* Ocupa a largura de 90% definida acima */
+        max-width: 100%;
+        text-align: center;
     }
     .day-cell-wrapper button.details-btn:hover {
         background-color: #e0e0e0 !important;
@@ -274,7 +280,7 @@ for week in month_days:
         with cols[i]:
             st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
             
-            # 1. Número do dia (Posição absoluta no canto)
+            # 1. Número do dia (Posição absoluta centralizada no topo)
             st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
 
             # 2. Faixa de Evento e Botão Detalhes (só se houverem lembretes)
@@ -297,9 +303,10 @@ for week in month_days:
                     """, unsafe_allow_html=True
                 )
                 
-                # 3. Botão Detalhes
+                # 3. Botão Detalhes (Posição absoluta na base)
                 btn_key_details = f"details_btn_{day_iso}"
-                if st.button("Detalhes", key=btn_key_details, use_container_width=True):
+                # Note: use_container_width=True aqui não é necessário, pois controlamos o width no CSS
+                if st.button("Detalhes", key=btn_key_details):
                     handle_details_click(day_iso)
                 
                 # Injeta a classe CSS personalizada no botão "Detalhes"
