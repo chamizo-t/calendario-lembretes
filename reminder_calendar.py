@@ -11,159 +11,12 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Mantidos)
-# ==============================
-st.markdown(
-    """
-    <style>
-    /* Estilos globais */
-    body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
-    h1, h2, h3 { text-align: center; color: #1f2937; }
-    
-    /* --- SIDEBAR --- */
-    section[data-testid="stSidebar"] {
-        background: #2c3e50;
-        color: white;
-        border-right: 1px solid #1a252f;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.15);
-    }
-    section[data-testid="stSidebar"] * { color: white; }
-    section[data-testid="stSidebar"] div.reminder-card {
-        padding: 10px;
-        margin-bottom: 8px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        border-left: 5px solid; 
-        background-color: #34495e;
-    }
-    section[data-testid="stSidebar"] .stButton button {
-        background: #e74c3c !important; 
-        color: white !important;
-        border-radius: 5px;
-        padding: 4px 8px;
-        font-size: 11px;
-        line-height: 1;
-        transition: background 0.2s;
-        width: auto !important; 
-    }
-
-    /* --- CALENDÁRIO GERAL --- */
-    div[data-testid^="stHorizontalBlock"] > div {
-        display: flex;
-        flex-direction: column;
-        padding: 0 4px !important;
-    }
-
-    /* Contêiner da célula do dia (Borda e Fundo) */
-    .day-cell-wrapper {
-        position: relative; 
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        margin: 0 auto;
-        padding: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        background-color: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px; 
-        height: 100%;
-        transition: all 0.2s;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    /* Estilos visuais */
-    .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
-    .selected-style { border: 2px solid #ff4b4b !important; background-color: #ffe0e0 !important; }
-
-    /* Número do dia */
-    .day-number-container {
-        font-weight: bold;
-        font-size: 14px; 
-        margin-bottom: 2px;
-        color: #1f2937;
-        padding: 1px; 
-        line-height: 1.4;
-        text-align: center;
-        width: 100%;
-        flex-shrink: 0;
-    }
-    .day-other-month-style .day-number-container { color: #6b7280; }
-    
-    .today-style .day-number-container > span {
-        color: #4b89dc !important;
-        border: 2px solid #4b89dc; 
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    /* --- BOTÃO INDIVIDUAL DE TÍTULO --- */
-    /* Container do botão st.button dentro da célula */
-    .day-cell-wrapper div[data-testid="stButton"] {
-        margin: 1px 0 0 0 !important;
-        width: 100%;
-        display: flex; 
-        justify-content: center;
-        transition: all 0.2s;
-        min-height: 0; 
-    }
-    
-    /* Botão em si (Estilo do Título) */
-    .day-cell-wrapper button.reminder-title-btn {
-        font-size: 10px;
-        padding: 1px 4px;
-        border-radius: 3px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 90%; 
-        font-weight: 500;
-        color: white !important; 
-        text-shadow: 0 0 1px rgba(0,0,0,0.3);
-        border: none !important;
-        cursor: pointer;
-        line-height: 1.4;
-        transition: transform 0.1s;
-        min-height: 20px; 
-        height: auto;
-    }
-    
-    /* Hover e Contagem */
-    .day-cell-wrapper button.reminder-title-btn:hover {
-        transform: scale(1.05);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-    .day-cell-wrapper .more-reminders {
-        font-size: 10px; 
-        margin-top: 2px; 
-        padding: 1px 4px; 
-        border-radius: 3px; 
-        background-color:#ccc; 
-        color:#333; 
-        font-weight: 500;
-        text-align: center;
-        width: fit-content;
-        line-height: 1.4;
-    }
-
-    .st-emotion-cache-1n76cwh a{ display: none !important; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ==============================
-# Conexão Google Sheets (Funções de Conexão e CRUD - Mantidas)
+# Variáveis e Funções de Sheets (Mantidas)
 # ==============================
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 @st.cache_resource
 def get_gspread_client():
-    """Autoriza e retorna o cliente gspread."""
     try:
         creds_dict = st.secrets["gcp_service_account"]
     except KeyError:
@@ -225,6 +78,123 @@ def get_reminders_for_day(reminders: List[Dict], day: datetime.date) -> List[Dic
     return [r for r in reminders if r["date"] == day.isoformat()]
 
 # ==============================
+# Estilos customizados
+# ==============================
+st.markdown(
+    """
+    <style>
+    /* Estilos globais e Sidebar (Mantidos) */
+    body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
+    h1, h2, h3 { text-align: center; color: #1f2937; }
+    
+    section[data-testid="stSidebar"] { background: #2c3e50; color: white; border-right: 1px solid #1a252f; box-shadow: 2px 0 5px rgba(0,0,0,0.15); }
+    section[data-testid="stSidebar"] * { color: white; }
+    section[data-testid="stSidebar"] div.reminder-card { padding: 10px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border-left: 5px solid; background-color: #34495e; }
+    section[data-testid="stSidebar"] .stButton button { background: #e74c3c !important; color: white !important; border-radius: 5px; padding: 4px 8px; font-size: 11px; line-height: 1; transition: background 0.2s; width: auto !important; }
+
+    /* --- CALENDÁRIO GERAL --- */
+    div[data-testid^="stHorizontalBlock"] > div { display: flex; flex-direction: column; padding: 0 4px !important; }
+
+    /* Contêiner da célula do dia (Borda e Fundo) */
+    .day-cell-wrapper {
+        position: relative; 
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        margin: 0 auto;
+        padding: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px; 
+        height: 100%;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow: hidden; /* Importante para a faixa */
+    }
+    
+    .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
+
+    /* Número do dia - Centralizado no topo */
+    .day-number-container {
+        font-weight: bold;
+        font-size: 14px; 
+        color: #1f2937;
+        padding: 1px 0; 
+        line-height: 1.4;
+        text-align: center;
+        width: 100%;
+        flex-shrink: 0;
+        margin-bottom: 2px;
+    }
+    .day-other-month-style .day-number-container { color: #6b7280; }
+    
+    .today-style .day-number-container > span {
+        color: #4b89dc !important;
+        border: 2px solid #4b89dc; 
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* --- FAIXA DE SELEÇÃO (NOVO ESTILO) --- */
+    .selected-strip {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 25%; /* Altura da faixa */
+        padding: 2px 4px;
+        color: white;
+        font-size: 10px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-shadow: 0 0 1px rgba(0,0,0,0.5);
+    }
+    .selected-strip-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 80%;
+        flex-grow: 1;
+    }
+    .selected-strip-icon {
+        font-size: 14px;
+        cursor: pointer;
+        padding-left: 4px;
+        line-height: 1;
+    }
+    .day-cell-wrapper.selected-style {
+        /* Remove a borda vermelha e usa a faixa colorida */
+        border: 2px solid #ddd;
+        background-color: #f5f5f5 !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        z-index: 5;
+    }
+    
+    /* --- BOTÃO INDIVIDUAL DE TÍTULO (Estilo mantido para não selecionado) --- */
+    .day-cell-wrapper div[data-testid="stButton"] { margin: 1px 0 0 0 !important; width: 100%; display: flex; justify-content: center; transition: all 0.2s; min-height: 0; }
+    .day-cell-wrapper button.reminder-title-btn {
+        font-size: 10px; padding: 1px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; 
+        font-weight: 500; color: white !important; text-shadow: 0 0 1px rgba(0,0,0,0.3); border: none !important; cursor: pointer; line-height: 1.4; transition: transform 0.1s; min-height: 20px; height: auto;
+    }
+    .day-cell-wrapper button.reminder-title-btn:hover { transform: scale(1.05); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+    .day-cell-wrapper .more-reminders { font-size: 10px; margin-top: 2px; padding: 1px 4px; border-radius: 3px; background-color:#ccc; color:#333; font-weight: 500; text-align: center; width: fit-content; line-height: 1.4; }
+
+    .st-emotion-cache-1n76cwh a{ display: none !important; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ==============================
 # Interface Principal
 # ==============================
 
@@ -271,7 +241,7 @@ week_cols = st.columns(7, gap="small")
 for i, wd in enumerate(weekdays):
     week_cols[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #4b89dc;'>{wd}</div>", unsafe_allow_html=True)
 
-# Lógica de clique (acionada pelo botão do título)
+# Lógica de clique (acionada pelo botão do título ou pelo ícone '?')
 def handle_reminder_click(day_iso: str):
     """Define o dia selecionado e abre a sidebar."""
     if st.session_state.selected_day == day_iso:
@@ -286,74 +256,109 @@ for week in month_days:
     for i, day in enumerate(week):
         day_iso = day.isoformat()
         day_reminders = get_reminders_for_day(reminders, day)
-        has_reminders = bool(day_reminders) # Variável definida aqui
+        has_reminders = bool(day_reminders)
         
         # Classes CSS
         classes = "day-cell-wrapper"
         if day.month != month: classes += " day-other-month-style"
         if day == today: classes += " today-style"
+        
+        # AQUI: Se o dia estiver selecionado, usamos a classe SELECTED_STYLE
         if day_iso == st.session_state.selected_day: classes += " selected-style" 
         
         with cols[i]:
-            # Usamos st.markdown para iniciar a estrutura do quadrado visual
             st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
             
-            # Renderiza o número do dia (dentro do quadrado)
+            # Renderiza o número do dia (centralizado no topo)
             st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
 
-            # Renderiza o TÍTULO como um BOTÃO (máx 2)
-            for r in day_reminders[:2]:
-                btn_label = f"**{r['title']}**"
-                btn_key = f"title_btn_{r['id']}_{day_iso}"
-                
-                # Renderiza o botão
-                if st.button(
-                    btn_label, 
-                    key=btn_key, 
-                    use_container_width=True, 
-                    help=f"Ver detalhes de: {r['title']}", 
-                ):
-                    handle_reminder_click(day_iso)
-                
-                # Aplica a cor de fundo e a classe de estilo via CSS e Script injetado
-                st.markdown(
-                    f"""
-                    <style>
-                    /* Aplica a cor de fundo ao botão */
-                    div[data-testid="stButton"] button[data-testid*="{btn_key}"] {{
-                        background-color: {r['color']} !important;
-                    }}
-                    </style>
-                    <script>
-                    // Adiciona a classe de estilo 'reminder-title-btn'
-                    setTimeout(() => {{
-                        const btn = window.document.querySelector('button[data-testid*="{btn_key}"]');
-                        if(btn) {{
-                            btn.classList.add('reminder-title-btn');
-                        }}
-                    }}, 10);
-                    </script>
-                    """, unsafe_allow_html=True
-                )
-                
-            # Renderiza o contador de mais eventos
-            if len(day_reminders) > 2:
-                st.markdown(
-                    f"""
-                    <div style='display: flex; justify-content: center;'>
-                        <div class='more-reminders'>
-                            +{len(day_reminders)-2}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True
-                )
+            # Renderiza o TÍTULO como um BOTÃO (máx 1 se selecionado, máx 2 se não)
             
+            # 1. Se o dia NÃO estiver selecionado (mostra títulos em formato de botões)
+            if day_iso != st.session_state.selected_day:
+                for r in day_reminders[:2]:
+                    btn_label = f"**{r['title']}**"
+                    btn_key = f"title_btn_{r['id']}_{day_iso}"
+                    
+                    if st.button(btn_label, key=btn_key, use_container_width=True, help=f"Ver detalhes de: {r['title']}"):
+                        handle_reminder_click(day_iso)
+                    
+                    # Aplica a cor de fundo e a classe de estilo via CSS e Script injetado
+                    st.markdown(
+                        f"""
+                        <style>
+                        div[data-testid="stButton"] button[data-testid*="{btn_key}"] {{ background-color: {r['color']} !important; }}
+                        </style>
+                        <script>
+                        setTimeout(() => {{
+                            const btn = window.document.querySelector('button[data-testid*="{btn_key}"]');
+                            if(btn) {{ btn.classList.add('reminder-title-btn'); }}
+                        }}, 10);
+                        </script>
+                        """, unsafe_allow_html=True
+                    )
+                    
+                # Renderiza o contador de mais eventos
+                if len(day_reminders) > 2:
+                    st.markdown(
+                        f"""
+                        <div style='display: flex; justify-content: center;'>
+                            <div class='more-reminders'> +{len(day_reminders)-2} </div>
+                        </div>
+                        """, unsafe_allow_html=True
+                    )
+            
+            # 2. Se o dia ESTIVER selecionado (mostra apenas a faixa colorida)
+            else:
+                if day_reminders:
+                    # Usa o primeiro lembrete para a cor e o título na faixa
+                    first_reminder = day_reminders[0]
+                    strip_color = first_reminder['color']
+                    strip_title = first_reminder['title']
+                    if len(day_reminders) > 1:
+                        strip_title += f" (+{len(day_reminders)-1})"
+                    
+                    # Injeta a faixa colorida e o ícone '?'
+                    st.markdown(
+                        f"""
+                        <div class="selected-strip" style="background-color: {strip_color};">
+                            <span class="selected-strip-title">{strip_title}</span>
+                            <span class="selected-strip-icon">?</span>
+                        </div>
+                        """, unsafe_allow_html=True
+                    )
+                    
+                    # Adiciona um botão invisível para o ícone '?' para re-clicar no dia
+                    # Isso garante que a lógica de deselecionar funcione ao clicar no '?'
+                    btn_key_strip = f"strip_btn_{day_iso}"
+                    if st.button(" ", key=btn_key_strip):
+                        handle_reminder_click(day_iso)
+                    
+                    # CSS para esconder o botão, mas manter o clique (similar ao antigo botão de célula inteira, mas só agora)
+                    st.markdown(
+                        f"""
+                        <style>
+                        div[data-testid="stButton"] button[data-testid*="{btn_key_strip}"] {{
+                            position: absolute;
+                            bottom: 0; 
+                            right: 0;
+                            width: 25px; /* Tamanho do ícone */
+                            height: 25px; /* Altura da faixa */
+                            background: transparent !important;
+                            border: none;
+                            z-index: 10;
+                            cursor: pointer;
+                        }}
+                        </style>
+                        """, unsafe_allow_html=True
+                    )
+                    
             # Fechamento do div .day-cell-wrapper
             st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
-# Sidebar de detalhes
+# Sidebar de detalhes (Mantida)
 # ==============================
 if st.session_state.selected_day:
     day = datetime.date.fromisoformat(st.session_state.selected_day)
