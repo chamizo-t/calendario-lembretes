@@ -20,42 +20,47 @@ st.markdown(
         font-family: 'Segoe UI', sans-serif;
     }
 
-    /* Células quadradas */
+    /* Células quadradas com grade */
     .day-cell {
-        border-radius: 6px;
-        width: 60px;
-        height: 60px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 70px;
+        height: 70px;
         text-align: center;
         transition: all 0.2s ease;
-        cursor: pointer;
-        font-size: 12px;
+        font-size: 11px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        margin: auto;
+        margin: 0 auto;
+        padding: 2px;
     }
     .day-cell:hover {
-        transform: scale(1.05);
-        box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
+        background: #f9f9f9;
     }
 
     /* Dia atual */
     .today {
         background-color: rgba(255, 217, 102, 0.3);
-        border: 1px solid #f1c232;
+        border: 2px solid #f1c232;
     }
 
-    /* Botões de lembrete no calendário */
-    .reminder-btn {
-        font-size: 10px !important;
-        padding: 2px 4px !important;
-        margin-top: 2px;
-        border-radius: 4px;
-        text-overflow: ellipsis;
-        overflow: hidden;
+    /* Número do dia */
+    .day-number {
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+
+    /* Texto do lembrete */
+    .reminder-title {
+        font-size: 9px;
+        margin-top: 1px;
+        padding: 0 2px;
         white-space: nowrap;
-        max-width: 55px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 65px;
     }
 
     /* Sidebar compacta */
@@ -85,7 +90,7 @@ creds_dict = st.secrets["gcp_service_account"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"  # ID da sua planilha
+SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
 sh = client.open_by_key(SPREADSHEET_ID)
 sheet = sh.sheet1
 
@@ -103,7 +108,6 @@ def load_reminders():
             date_obj = datetime.date.fromisoformat(r["date"])
         except:
             continue
-        # expira após 10 dias
         if date_obj < today - datetime.timedelta(days=10):
             delete_reminder(r["id"])
             continue
@@ -140,7 +144,7 @@ st.subheader(f"{calendar.month_name[month]} {year}")
 
 # Cabeçalho dos dias da semana
 weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-cols = st.columns(7)
+cols = st.columns(7, gap="small")
 for i, wd in enumerate(weekdays):
     cols[i].markdown(f"**{wd}**")
 
@@ -158,15 +162,21 @@ for week in month_days:
             if day == today:
                 classes += " today"
 
-            # Dia
-            st.markdown(f"<div class='{classes}'>{day.day}</div>", unsafe_allow_html=True)
+            # HTML do dia
+            html = f"<div class='{classes}'>"
+            html += f"<div class='day-number'>{day.day}</div>"
 
-            # Lembretes como botões
+            # Títulos dos lembretes
             for r in day_reminders[:2]:
-                if st.button(r["title"], key=f"{r['id']}_{day}", help="Clique para ver detalhes"):
-                    st.session_state.selected_day = day.isoformat()
+                html += f"<div class='reminder-title' style='color:{r['color']}'>{r['title']}</div>"
             if len(day_reminders) > 2:
-                st.caption(f"+{len(day_reminders)-2}")
+                html += f"<div class='reminder-title'>+{len(day_reminders)-2}</div>"
+
+            html += "</div>"
+            if st.button("", key=f"btn_{day}", help=f"Ver detalhes de {day}"):
+                st.session_state.selected_day = day.isoformat()
+
+            st.markdown(html, unsafe_allow_html=True)
 
 # ==============================
 # Sidebar de detalhes
