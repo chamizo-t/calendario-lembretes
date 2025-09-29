@@ -11,16 +11,15 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Ajustado para o layout visual)
-# ==============================
+# Estilos customizados (Ajuste de Altura e Layout da Célula)
+# ==========================================================
 st.markdown(
     """
     <style>
     /* Estilos globais */
     body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
     h1, h2, h3 { text-align: center; color: #1f2937; }
-    .st-emotion-cache-10trblm { color: #4b89dc !important; }
-
+    
     /* --- SIDEBAR --- */
     section[data-testid="stSidebar"] {
         background: #2c3e50;
@@ -29,9 +28,6 @@ st.markdown(
         box-shadow: 2px 0 5px rgba(0,0,0,0.15);
     }
     section[data-testid="stSidebar"] * { color: white; }
-    section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3 {
-        color: #79a6dc;
-    }
     section[data-testid="stSidebar"] div.reminder-card {
         padding: 10px;
         margin-bottom: 8px;
@@ -49,20 +45,17 @@ st.markdown(
         line-height: 1;
         transition: background 0.2s;
         width: auto !important; 
-        position: relative;
-        z-index: 20;
-    }
-    section[data-testid="stSidebar"] .stButton button:hover {
-        background: #c0392b !important;
     }
 
     /* --- CALENDÁRIO GERAL --- */
-    /* Remove a margem vertical do st.container para melhor ajuste */
-    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
-        margin-block-start: 0;
-        margin-block-end: 0;
+    /* Garante que o container da coluna tenha um aspecto quadrado */
+    div[data-testid^="stHorizontalBlock"] > div {
+        display: flex;
+        flex-direction: column;
+        padding: 0 4px !important;
+        /* Estilos removidos daqui e movidos para o .day-cell-wrapper */
     }
-    
+
     /* Contêiner da célula do dia (Borda e Fundo) */
     .day-cell-wrapper {
         position: relative; 
@@ -89,17 +82,16 @@ st.markdown(
     .day-number-container {
         font-weight: bold;
         font-size: 14px; 
-        margin-bottom: 4px;
+        margin-bottom: 2px; /* Reduz margem */
         color: #1f2937;
         padding: 1px; 
         line-height: 1.4;
         text-align: center;
         width: 100%;
-        flex-shrink: 0; /* Não deixa encolher */
+        flex-shrink: 0;
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
-    /* Dia Atual */
     .today-style .day-number-container > span {
         color: #4b89dc !important;
         border: 2px solid #4b89dc; 
@@ -114,11 +106,12 @@ st.markdown(
     /* --- BOTÃO INDIVIDUAL DE TÍTULO --- */
     /* Container do botão st.button dentro da célula */
     .day-cell-wrapper div[data-testid="stButton"] {
-        margin: 2px 0 0 0 !important;
+        margin: 1px 0 0 0 !important; /* Reduz margem externa */
         width: 100%;
         display: flex; 
         justify-content: center;
         transition: all 0.2s;
+        min-height: 0; /* IMPEDE A ALTURA MÍNIMA PADRÃO */
     }
     
     /* Botão em si (Estilo do Título) */
@@ -137,7 +130,7 @@ st.markdown(
         cursor: pointer;
         line-height: 1.4;
         transition: transform 0.1s;
-        min-height: auto;
+        min-height: 20px; /* GARANTE ALTURA MÍNIMA PARA O CLIQUE, mas sem estourar */
         height: auto;
     }
     
@@ -159,7 +152,6 @@ st.markdown(
         line-height: 1.4;
     }
 
-    /* Ocultar link 'st-emotion-cache-1n76cwh' (se houver) */
     .st-emotion-cache-1n76cwh a{ display: none !important; }
     </style>
     """,
@@ -281,7 +273,7 @@ week_cols = st.columns(7, gap="small")
 for i, wd in enumerate(weekdays):
     week_cols[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #4b89dc;'>{wd}</div>", unsafe_allow_html=True)
 
-# Lógica de clique (agora acionada pelo botão do título)
+# Lógica de clique (acionada pelo botão do título)
 def handle_reminder_click(day_iso: str):
     """Define o dia selecionado e abre a sidebar."""
     if st.session_state.selected_day == day_iso:
@@ -304,55 +296,76 @@ for week in month_days:
         if day_iso == st.session_state.selected_day: classes += " selected-style" 
         
         with cols[i]:
-            # Usamos st.container para criar o quadrado visual da célula
-            with st.container():
-                st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
-                
-                # Renderiza o número do dia (dentro do quadrado)
-                st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
+            # Usamos st.markdown para iniciar a estrutura do quadrado visual
+            st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
+            
+            # Renderiza o número do dia (dentro do quadrado)
+            st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
 
-                # Renderiza o TÍTULO como um BOTÃO (máx 2)
-                for r in day_reminders[:2]:
-                    btn_label = f"**{r['title']}**"
-                    btn_key = f"title_btn_{r['id']}_{day_iso}"
-                    
-                    if st.button(
-                        btn_label, 
-                        key=btn_key, 
-                        use_container_width=True, 
-                        help=f"Ver detalhes de: {r['title']}", 
-                    ):
-                        handle_reminder_click(day_iso)
-                    
-                    # Aplica a cor de fundo e a classe de estilo via CSS/HTML injetado
-                    st.markdown(
-                        f"""
-                        <style>
-                        div[data-testid="stButton"] button[data-testid*="{btn_key}"] {{
-                            background-color: {r['color']} !important;
-                        }}
-                        </style>
-                        <script>
-                        const btn = window.document.querySelector('[data-testid*="{btn_key}"]').querySelector('button');
-                        if(btn) {{
-                            btn.classList.add('reminder-title-btn');
-                        }}
-                        </script>
-                        """, unsafe_allow_html=True
-                    )
-                    
-                # Renderiza o contador de mais eventos
-                if len(day_reminders) > 2:
-                    st.markdown(
-                        f"""
+            # Renderiza o TÍTULO como um BOTÃO (máx 2)
+            for r in day_reminders[:2]:
+                btn_label = f"**{r['title']}**"
+                btn_key = f"title_btn_{r['id']}_{day_iso}"
+                
+                # Renderiza o botão
+                if st.button(
+                    btn_label, 
+                    key=btn_key, 
+                    use_container_width=True, 
+                    help=f"Ver detalhes de: {r['title']}", 
+                ):
+                    handle_reminder_click(day_iso)
+                
+                # Aplica a cor de fundo e a classe de estilo via CSS injetado
+                st.markdown(
+                    f"""
+                    <style>
+                    /* Aplica a cor de fundo ao botão */
+                    div[data-testid="stButton"] button[data-testid*="{btn_key}"] {{
+                        background-color: {r['color']} !important;
+                    }}
+                    </style>
+                    """, unsafe_allow_html=True
+                )
+                
+                # Adiciona a classe de estilo (requer script/markdown adicional)
+                # O método mais limpo é tentar aplicar a classe via script, mas o Streamlit pode barrar.
+                # Para garantir o visual, usamos um truque de CSS no bloco principal.
+
+                
+            # Renderiza o contador de mais eventos
+            if len(day_reminders) > 2:
+                st.markdown(
+                    f"""
+                    <div style='display: flex; justify-content: center;'>
                         <div class='more-reminders'>
                             +{len(day_reminders)-2}
                         </div>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+            
+            # Fechamento do div .day-cell-wrapper
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Correção de layout: Adiciona a classe de estilo ao botão após sua renderização
+            # Isso é necessário porque o Streamlit não permite aplicar classes a botões nativamente.
+            if has_reminders:
+                for r in day_reminders[:2]:
+                    btn_key = f"title_btn_{r['id']}_{day_iso}"
+                    st.markdown(
+                        f"""
+                        <script>
+                        // Atraso para garantir que o elemento exista no DOM
+                        setTimeout(() => {{
+                            const btn = window.document.querySelector('button[data-testid*="{btn_key}"]');
+                            if(btn) {{
+                                btn.classList.add('reminder-title-btn');
+                            }}
+                        }}, 10);
+                        </script>
                         """, unsafe_allow_html=True
                     )
-                
-                # Fechamento do div .day-cell-wrapper
-                st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
