@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Mantidos)
+# Estilos customizados (CORREÇÃO DE POSICIONAMENTO DO BOTÃO)
 # ==============================
 st.markdown(
     """
@@ -21,7 +21,7 @@ st.markdown(
     h1, h2, h3 { text-align: center; color: #1f2937; }
     .st-emotion-cache-10trblm { color: #4b89dc !important; }
 
-    /* --- SIDEBAR ESCURA E PROFISSIONAL --- */
+    /* --- SIDEBAR --- */
     section[data-testid="stSidebar"] {
         background: #2c3e50;
         color: white;
@@ -56,12 +56,19 @@ st.markdown(
         background: #c0392b !important;
     }
 
-    /* --- CALENDÁRIO --- */
+    /* --- CALENDÁRIO FIX: Make Streamlit columns relative for absolute button positioning --- */
+    /* Targeta os 7 divs de coluna dentro do row container (o calendário) */
+    div[data-testid^="stHorizontalBlock"] > div {
+        position: relative; /* ESSENCIAL PARA O POSICIONAMENTO DO BOTÃO */
+    }
+
+    /* --- CALENDÁRIO VISUAL --- */
     .day-cell-wrapper {
         position: relative; 
         width: 100%;
         aspect-ratio: 1 / 1;
         margin: 0 auto;
+        z-index: 1; /* Abaixo do botão */
     }
     
     .day-cell {
@@ -78,14 +85,12 @@ st.markdown(
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        pointer-events: none;
+        pointer-events: none; /* Permite que o clique atravesse o visual para o botão */
     }
 
-    /* Dia de outro mês e selecionado (estilos visuais) */
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; }
     .selected-style { border: 2px solid #ff4b4b !important; background-color: #ffe0e0 !important; }
 
-    /* Número do dia */
     .day-number-container {
         font-weight: bold;
         font-size: 14px; 
@@ -97,7 +102,6 @@ st.markdown(
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
-    /* DIA ATUAL (Anel Azul) */
     .today-style .day-number-container {
         background-color: transparent !important;
         color: #4b89dc !important;
@@ -110,7 +114,6 @@ st.markdown(
         justify-content: center;
     }
 
-    /* Texto do lembrete */
     .reminder-title {
         font-size: 10px;
         margin-top: 2px;
@@ -125,37 +128,45 @@ st.markdown(
         text-shadow: 0 0 1px rgba(0,0,0,0.3);
     }
     
-    /* Botão Streamlit que cobre a célula para o clique */
+    /* --- BOTÃO CLICÁVEL (Invisível) --- */
     .stButton>button {
         background: transparent !important; 
         color: transparent !important;
         border: none;
         box-shadow: none;
-        cursor: default; /* Padrão: Não clicável (só para seleção) */
+        cursor: default; 
         
-        position: absolute;
+        position: absolute; /* ESSENCIAL */
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         padding: 0;
         margin: 0;
-        z-index: 10; 
+        z-index: 10; /* Fica por cima do conteúdo visual */
         transition: all 0.2s;
     }
 
-    /* Cursor de PONTEIRO (Somente se a célula tiver a classe 'has-reminders') */
-    .day-cell-wrapper.has-reminders .stButton>button {
+    /* Mudar cursor somente se tiver lembretes */
+    .day-cell-wrapper.has-reminders + div[data-testid="stButton"] > button {
         cursor: pointer;
     }
     
     /* Efeito de hover */
-    .day-cell-wrapper.has-reminders .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        background: rgba(75, 137, 220, 0.1) !important; 
+    .day-cell-wrapper.has-reminders + div[data-testid="stButton"] > button:hover {
+        /* Remove o hover do botão, para deixar o efeito visual do wrapper */
+        transform: none; 
+        box-shadow: none;
+        background: transparent !important;
     }
     
+    /* Hover do wrapper visual */
+    .day-cell-wrapper.has-reminders:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        background: rgba(75, 137, 220, 0.1) !important;
+    }
+
     .st-emotion-cache-1n76cwh a{ display: none !important; }
     </style>
     """,
@@ -171,13 +182,20 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 def get_gspread_client():
     """Autoriza e retorna o cliente gspread."""
     try:
+        # Tenta usar o secret
         creds_dict = st.secrets["gcp_service_account"]
+    except KeyError:
+        # Se não houver, assume que está em ambiente local ou que o secret é passado de outra forma
+        st.error("O secret 'gcp_service_account' não foi encontrado. Por favor, configure-o para usar o Google Sheets.")
+        st.stop()
+        
+    try:
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         client = gspread.authorize(creds)
         SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
         return client.open_by_key(SPREADSHEET_ID).sheet1
-    except Exception:
-        st.error("Erro ao conectar com o Google Sheets. Verifique o arquivo `secrets.toml`.")
+    except Exception as e:
+        st.error(f"Erro ao conectar com o Google Sheets: {e}")
         st.stop()
 
 sheet = get_gspread_client()
@@ -272,28 +290,13 @@ for i, wd in enumerate(weekdays):
 if "selected_day" not in st.session_state:
     st.session_state.selected_day = None
 
-# FUNÇÃO DE CLIQUE AJUSTADA!
 def handle_day_click(day_iso: str, has_reminders: bool):
-    """
-    Define o dia selecionado.
-    Abre a sidebar APENAS se houver lembretes.
-    """
-    # 1. Se o dia clicado for o mesmo do estado, deseleciona.
-    if st.session_state.selected_day == day_iso:
-        st.session_state.selected_day = None
-        return # Não faz mais nada
+    current_selected = st.session_state.selected_day
 
-    # 2. Atualiza o dia selecionado.
-    st.session_state.selected_day = day_iso
-    
-    # 3. Se NÃO houver lembretes, forçamos a sidebar a fechar (limpa o estado).
-    # O Streamlit abre a sidebar automaticamente quando 'st.sidebar' é renderizado.
-    # O código abaixo garante que ela só seja renderizada se houver lembretes.
-    if not has_reminders:
-        st.session_state.selected_day = None # Não seleciona para ver detalhes.
-        # No entanto, a seleção é útil para o formulário abaixo. Vamos manter a seleção,
-        # mas a sidebar só aparece no bloco de código dela se houver eventos.
-        pass # A sidebar será controlada pelo bloco IF abaixo.
+    if current_selected == day_iso:
+        st.session_state.selected_day = None
+    else:
+        st.session_state.selected_day = day_iso
 
 
 # Renderizar dias do mês
@@ -302,7 +305,7 @@ for week in month_days:
     for i, day in enumerate(week):
         day_iso = day.isoformat()
         day_reminders = get_reminders_for_day(reminders, day)
-        has_reminders = bool(day_reminders) # Flag para o clique
+        has_reminders = bool(day_reminders) 
 
         # Classes CSS
         classes = "day-cell"
@@ -317,7 +320,6 @@ for week in month_days:
         if day_iso == st.session_state.selected_day:
             classes += " selected-style" 
         
-        # Adiciona classe para MUDAR O CURSOR se houver lembretes
         if has_reminders:
             wrapper_classes += " has-reminders"
         
@@ -337,19 +339,16 @@ for week in month_days:
             <div class='{classes}'>
                 {content_html}
             </div>
+        </div>
         """
         
         with cols[i]:
-            # 1. Renderiza o visual da célula com st.markdown.
-            st.markdown(full_cell_wrapper_html, unsafe_allow_html=True)
-            
-            # 2. Renderiza o botão de clique com um rótulo simples (" ").
-            # A função de clique agora usa a flag 'has_reminders' para controlar o que a sidebar exibe.
+            # 1. Renderiza o botão de clique. (Fica por cima via CSS)
             if st.button(" ", key=f"btn_{day_iso}"):
                  handle_day_click(day_iso, has_reminders)
             
-            # 3. Fecha o wrapper
-            st.markdown("</div>", unsafe_allow_html=True)
+            # 2. Renderiza o visual da célula.
+            st.markdown(full_cell_wrapper_html, unsafe_allow_html=True)
 
 
 # ==============================
@@ -386,9 +385,8 @@ if st.session_state.selected_day:
                      st.session_state.selected_day = None 
                      st.rerun() 
     else:
-         # Se o dia foi clicado, mas não tem lembretes, não mostra nada na sidebar de detalhes
-         # Isso implementa o comportamento de "só clicar para detalhes se houver título"
-         pass
+         # Se o dia selecionado NÃO tiver lembretes, limpamos a seleção para fechar a sidebar
+         st.session_state.selected_day = None
 
 
 # ==============================
@@ -407,7 +405,6 @@ with st.container(border=True):
         title = st.text_input("📝 **Título do Evento**", max_chars=50)
         description = st.text_area("🗒️ **Descrição**")
         
-        # Usa o dia selecionado no calendário como padrão para o formulário
         default_date = datetime.date.today()
         if st.session_state.selected_day:
             try:
