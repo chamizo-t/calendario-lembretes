@@ -1,7 +1,3 @@
-# reminder_calendar.py
-# Requer: pip install streamlit
-# Rodar: streamlit run reminder_calendar.py
-
 import sqlite3
 from datetime import date, datetime
 import calendar
@@ -10,8 +6,6 @@ import streamlit as st
 DB = "reminders.db"
 
 # --- DB helpers ---
-
-
 def init_db():
     conn = sqlite3.connect(DB, check_same_thread=False)
     c = conn.cursor()
@@ -28,9 +22,7 @@ def init_db():
     conn.commit()
     return conn
 
-
 conn = init_db()
-
 
 def add_reminder(title, description, date_str, created_by):
     c = conn.cursor()
@@ -40,82 +32,78 @@ def add_reminder(title, description, date_str, created_by):
     )
     conn.commit()
 
+def update_reminder(rid, title, description):
+    c = conn.cursor()
+    c.execute(
+        "UPDATE reminders SET title=?, description=? WHERE id=?",
+        (title, description, rid)
+    )
+    conn.commit()
+
+def delete_reminder(rid):
+    c = conn.cursor()
+    c.execute("DELETE FROM reminders WHERE id=?", (rid,))
+    conn.commit()
 
 def get_reminders_between(start_date, end_date):
     c = conn.cursor()
-    c.execute("SELECT id, title, description, date, created_by FROM reminders WHERE date BETWEEN ? AND ? ORDER BY date",
-              (start_date.isoformat(), end_date.isoformat()))
-    rows = c.fetchall()
-    return rows
-
+    c.execute(
+        "SELECT id, title, description, date, created_by FROM reminders WHERE date BETWEEN ? AND ? ORDER BY date",
+        (start_date.isoformat(), end_date.isoformat())
+    )
+    return c.fetchall()
 
 def get_all_reminders():
     c = conn.cursor()
-    c.execute(
-        "SELECT id, title, description, date, created_by FROM reminders ORDER BY date")
+    c.execute("SELECT id, title, description, date, created_by FROM reminders ORDER BY date")
     return c.fetchall()
-
 
 # --- UI ---
 st.set_page_config(page_title="Calendário de Lembretes", layout="wide")
-st.title("📆 Calendário de Lembretes — compartilhável")
+st.title("📆 Calendário de Lembretes — colaborativo")
 
 # Sidebar: criar lembrete
-st.sidebar.header("Adicionar lembrete")
+st.sidebar.header("➕ Adicionar lembrete")
 with st.sidebar.form("form_add"):
     title = st.text_input("Título", max_chars=100)
     description = st.text_area("Descrição (opcional)", height=80)
     d = st.date_input("Data do lembrete", value=date.today())
-    created_by = st.text_input(
-        "Seu nome (aparecerá nos lembretes)", value="Anônimo")
-    submitted = st.form_submit_button("Salvar lembrete")
+    created_by = st.text_input("Seu nome", value="Anônimo")
+    submitted = st.form_submit_button("Salvar")
     if submitted:
         if not title.strip():
             st.sidebar.error("Por favor, informe um título.")
         else:
-            add_reminder(title.strip(), description.strip(),
-                         d.isoformat(), created_by.strip() or "Anônimo")
+            add_reminder(title.strip(), description.strip(), d.isoformat(), created_by.strip() or "Anônimo")
             st.sidebar.success(f"Lembrete salvo para {d.isoformat()}")
 
 # Controle de visualização
 st.sidebar.markdown("---")
-view_month = st.sidebar.date_input(
-    "Mês para visualizar", value=date.today().replace(day=1))
-show_own_only = st.sidebar.checkbox(
-    "Mostrar só meus lembretes (filtrar por nome)", value=False)
-filter_name = ""
-if show_own_only:
-    filter_name = st.sidebar.text_input("Nome para filtrar", value="Anônimo")
+view_month = st.sidebar.date_input("📅 Escolha o mês", value=date.today().replace(day=1))
 
-# Build month calendar
 year = view_month.year
 month = view_month.month
-# segunda=0? (0=segunda?) -> python: 0=Monday
 cal = calendar.Calendar(firstweekday=0)
 month_days = cal.monthdatescalendar(year, month)
 
 st.subheader(f"{calendar.month_name[month]} {year}")
 
-# Gather reminders for month
+# Obter lembretes do mês
 first_day = date(year, month, 1)
 last_day = month_days[-1][-1]
 rows = get_reminders_between(first_day, last_day)
 
-# Convert rows to dict by date
 rem_by_date = {}
-for r in rows:
-    rid, title_r, desc_r, date_r, created_by_r = r
-    dobj = datetime.fromisoformat(date_r).date() if isinstance(
-        date_r, str) else date.fromisoformat(date_r)
-    if show_own_only and filter_name.strip():
-        if (created_by_r or "").lower().strip() != filter_name.lower().strip():
-            continue
-    rem_by_date.setdefault(dobj, []).append(
-        {"id": rid, "title": title_r, "desc": desc_r, "by": created_by_r})
+for rid, title_r, desc_r, date_r, created_by_r in rows:
+    dobj = datetime.fromisoformat(date_r).date()
+    rem_by_date.setdefault(dobj, []).append({
+        "id": rid,
+        "title": title_r,
+        "desc": desc_r,
+        "by": created_by_r
+    })
 
-# Render calendar as table
-cols = st.columns(len(month_days[0]))
-# header with weekdays
+# Renderizar calendário
 weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 hd = st.columns(7)
 for i, wd in enumerate(weekdays):
@@ -125,24 +113,38 @@ for week in month_days:
     cols = st.columns(7)
     for i, day in enumerate(week):
         with cols[i]:
-            # shade days not in current month
-            if day.month != month:
-                st.markdown(
-                    f"<div style='opacity:0.25'>{day.day}</div>", unsafe_allow_html=True)
+            # Destacar hoje
+            if day == date.today():
+                st.markdown(f"<div style='background:#ffd966; padding:4px; border-radius:6px;'><b>{day.day}</b></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"**{day.day}**")
-            # show reminders
+
+            # Mostrar lembretes
             if day in rem_by_date:
                 for item in rem_by_date[day]:
-                    st.markdown(
-                        f"- **{item['title']}**  \n  _por: {item['by']}_  \n  {item['desc'][:120]}{'...' if len(item['desc'] or '')>120 else ''}")
+                    with st.expander(f"🔔 {item['title']} (por {item['by']})"):
+                        st.write(item["desc"] if item["desc"] else "_(sem descrição)_")
 
+                        # Botões de ação
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("✏️ Editar", key=f"edit-{item['id']}"):
+                                new_title = st.text_input("Novo título", item["title"], key=f"t-{item['id']}")
+                                new_desc = st.text_area("Nova descrição", item["desc"], key=f"d-{item['id']}")
+                                if st.button("Salvar alterações", key=f"save-{item['id']}"):
+                                    update_reminder(item["id"], new_title, new_desc)
+                                    st.experimental_rerun()
+                        with col2:
+                            if st.button("🗑️ Excluir", key=f"del-{item['id']}"):
+                                delete_reminder(item["id"])
+                                st.experimental_rerun()
+
+# Lista geral
 st.markdown("---")
-st.subheader("Todos os lembretes")
-allr = get_all_reminders()
-for r in allr:
+st.subheader("📋 Todos os lembretes")
+for r in get_all_reminders():
     st.write(f"- {r[3]} — **{r[1]}** (por {r[4]})")
-    if r[2]:
-        st.write(f"  > {r[2]}")
+
 
 st.info("Dica: para compartilhar com o time, hospede este arquivo (Streamlit Cloud / Heroku / VPS) e envie o link.")
+
