@@ -115,21 +115,23 @@ st.markdown(
     
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
 
-    /* Número do dia - NOVO: Centralizado no topo com transform */
+    /* Número do dia - NOVO: Centralizado Totalmente (Vertical e Horizontal) */
     .day-number-container {
         position: absolute; 
-        top: 4px; /* Ajuste a distância do topo se necessário */
-        left: 50%;
-        transform: translateX(-50%); /* Centraliza horizontalmente */
+        top: 50%; /* 50% do topo */
+        left: 50%; /* 50% da esquerda */
+        transform: translate(-50%, -50%); /* Ajusta o elemento em -50% da sua própria largura/altura */
         font-weight: bold;
         font-size: 14px; 
         color: #1f2937;
         padding: 0; 
         line-height: 1.4;
         z-index: 2;
-        width: auto; /* Deixa a largura automática para o transform funcionar melhor */
-        text-align: center; /* Garante que o texto fique centrado */
+        width: auto; 
+        text-align: center; 
+        pointer-events: none; /* Garante que o número não atrapalhe cliques no dia */
     }
+    
     .day-other-month-style .day-number-container { color: #6b7280; }
     
     .today-style .day-number-container > span {
@@ -139,7 +141,7 @@ st.markdown(
     /* --- FAIXA DE EVENTO --- */
     .reminder-strip {
         position: absolute;
-        bottom: 24px; /* Ajuste para ficar logo acima do botão Detalhes (22px altura do botão + 2px de margem) */
+        bottom: 24px; /* Acima do botão */
         left: 0;
         width: 100%;
         height: 20px; 
@@ -279,7 +281,7 @@ for week in month_days:
         with cols[i]:
             st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
             
-            # 1. Número do dia (Posição absoluta centralizada no topo)
+            # 1. Número do dia (Posição absoluta centralizada)
             st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
 
             # 2. Faixa de Evento e Botão Detalhes (só se houverem lembretes)
