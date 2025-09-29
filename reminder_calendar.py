@@ -115,21 +115,21 @@ st.markdown(
     
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
 
-    /* Número do dia - NOVO: Centralizado Totalmente (Vertical e Horizontal) */
+    /* 1. Número do dia - Centralizado horizontalmente e POSICIONADO NO TOPO */
     .day-number-container {
         position: absolute; 
-        top: 50%; /* 50% do topo */
-        left: 50%; /* 50% da esquerda */
-        transform: translate(-50%, -50%); /* Ajusta o elemento em -50% da sua própria largura/altura */
+        top: 4px; /* Move para o topo */
+        left: 50%; 
+        transform: translateX(-50%); /* Centraliza horizontalmente */
         font-weight: bold;
-        font-size: 14px; 
+        font-size: 16px; /* Aumenta ligeiramente para destaque no topo */
         color: #1f2937;
         padding: 0; 
         line-height: 1.4;
         z-index: 2;
         width: auto; 
         text-align: center; 
-        pointer-events: none; /* Garante que o número não atrapalhe cliques no dia */
+        pointer-events: none;
     }
     
     .day-other-month-style .day-number-container { color: #6b7280; }
@@ -165,21 +165,21 @@ st.markdown(
         max-width: 95%;
     }
     
-    /* --- BOTÃO DETALHES --- */
-    /* Container do botão st.button: Reduz o padding lateral do Streamlit para encaixar melhor */
+    /* --- 2. BOTÃO DETALHES (Largura Ajustada) --- */
+    /* Container do botão st.button: Reduz o padding lateral para caber a palavra */
     .day-cell-wrapper div[data-testid="stButton"] {
         position: absolute;
         bottom: 0px;
         left: 0;
         width: 100%;
         margin: 0 !important;
-        padding: 4px 5px !important; 
+        padding: 4px 2px !important; /* REDUÇÃO CRÍTICA de padding lateral */
         z-index: 4;
         display: flex; 
         justify-content: center;
     }
     
-    /* Botão em si: Define um tamanho fixo */
+    /* Botão em si: Garante que o texto se ajuste */
     .day-cell-wrapper button.details-btn {
         font-size: 10px;
         padding: 1px 4px;
@@ -281,7 +281,7 @@ for week in month_days:
         with cols[i]:
             st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
             
-            # 1. Número do dia (Posição absoluta centralizada)
+            # 1. Número do dia (Posição absoluta centralizada no topo)
             st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
 
             # 2. Faixa de Evento e Botão Detalhes (só se houverem lembretes)
