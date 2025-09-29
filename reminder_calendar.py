@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Aprimorados)
+# Estilos customizados (Máximo Refinamento)
 # ==============================
 st.markdown(
     """
@@ -33,9 +33,48 @@ st.markdown(
         color: #4b89dc !important; /* Cor principal da paleta */
     }
 
-    /* Células quadradas com grade */
+    /* --- SIDEBAR ESCURA E PROFISSIONAL --- */
+    section[data-testid="stSidebar"] {
+        background: #2c3e50; /* Fundo escuro */
+        color: white;
+        border-right: 1px solid #1a252f;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.15);
+    }
+    /* Cores do texto e títulos na sidebar */
+    section[data-testid="stSidebar"] * {
+        color: white; 
+    }
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3 {
+        color: #79a6dc; /* Azul claro para títulos */
+    }
+    /* Cards de Lembrete na Sidebar */
+    section[data-testid="stSidebar"] div.reminder-card {
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        font-size: 13px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        border-left: 5px solid; 
+        background-color: #34495e; /* Fundo um pouco mais claro que a sidebar */
+    }
+    /* Botão de Excluir no Card */
+    .delete-button-container button {
+        background: #e74c3c !important; 
+        color: white !important;
+        border-radius: 5px;
+        padding: 4px 8px;
+        font-size: 11px;
+        line-height: 1;
+        transition: background 0.2s;
+    }
+    .delete-button-container button:hover {
+        background: #c0392b !important;
+    }
+    
+    /* --- CALENDÁRIO --- */
     .day-cell-container {
-        position: relative; /* Pai para posicionar o botão absoluto */
+        position: relative; 
         width: 100%;
         aspect-ratio: 1 / 1;
         margin: 0 auto;
@@ -44,7 +83,7 @@ st.markdown(
 
     .day-cell {
         border: 1px solid #e5e7eb;
-        border-radius: 8px; /* Mais arredondado */
+        border-radius: 8px; 
         width: 100%; 
         height: 100%;
         text-align: center;
@@ -55,26 +94,32 @@ st.markdown(
         justify-content: flex-start;
         align-items: center;
         padding: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra suave */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background-color: white; /* Fundo branco para células */
+        pointer-events: none; /* Garante que o clique vá para o botão invisível */
     }
 
     /* Dia atual */
     .today {
-        background-color: #e3f2fd !important; /* Azul claro suave */
-        border: 2px solid #4b89dc !important; /* Borda azul */
+        background-color: #e3f2fd !important; 
+        border: 2px solid #4b89dc !important; 
     }
     
     /* Dia de outro mês */
     .day-other-month {
-        opacity: 0.6;
+        opacity: 0.5;
+        background-color: #f7f9fc !important;
     }
 
-    /* Número do dia */
+    /* Número do dia - MUITO IMPORTANTE: Garante que seja visível */
     .day-number {
         font-weight: bold;
-        font-size: 14px; /* Aumentar o número */
+        font-size: 14px; 
         margin-bottom: 4px;
-        color: #1f2937;
+        color: #1f2937; /* Cor escura e forte */
+    }
+    .day-other-month .day-number {
+        color: #6b7280;
     }
 
     /* Texto do lembrete */
@@ -88,7 +133,7 @@ st.markdown(
         text-overflow: ellipsis;
         max-width: 90%;
         font-weight: 500;
-        color: white !important; /* Forçar texto branco */
+        color: white !important; 
         text-shadow: 0 0 1px rgba(0,0,0,0.3);
     }
     
@@ -101,38 +146,17 @@ st.markdown(
         height: 100%;
         padding: 0;
         margin: 0;
-        background: transparent !important; /* Torna o botão invisível */
+        background: transparent !important; 
         color: transparent !important;
         border: none;
         box-shadow: none;
         cursor: pointer;
-        z-index: 10; /* Garante que está acima do HTML */
+        z-index: 10; 
+        transition: background 0.2s; /* Adicionado para um hover suave */
     }
     .stButton>button:hover {
-        background: rgba(0,0,0,0.05) !important; /* Efeito de hover */
-    }
-
-    /* Sidebar aprimorada */
-    section[data-testid="stSidebar"] {
-        background: #ffffff; 
-        color: #1f2937;
-        border-right: 1px solid #e5e7eb;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-    }
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
-        color: #4b89dc;
-    }
-
-    /* Card de lembrete na Sidebar */
-    section[data-testid="stSidebar"] div.reminder-card {
-        padding: 10px;
-        margin-bottom: 8px;
-        border-radius: 8px;
-        font-size: 13px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 5px solid; 
+        background: rgba(0, 78, 149, 0.1) !important; /* Efeito de hover azul claro */
+        border: 1px solid rgba(75, 137, 220, 0.5); /* Borda suave no hover */
     }
     
     .st-emotion-cache-1n76cwh a{
@@ -157,8 +181,7 @@ def get_gspread_client():
         client = gspread.authorize(creds)
         SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
         return client.open_by_key(SPREADSHEET_ID).sheet1
-    except Exception as e:
-        # st.error(f"Erro ao conectar com o Google Sheets: {e}")
+    except Exception:
         st.error("Erro ao conectar com o Google Sheets. Verifique o arquivo `secrets.toml`.")
         st.stop()
 
@@ -167,13 +190,12 @@ sheet = get_gspread_client()
 # ==============================
 # Funções (Com otimização de cache)
 # ==============================
-@st.cache_data(ttl=60) # Cache por 60 segundos
+@st.cache_data(ttl=60) 
 def load_reminders() -> List[Dict[str, Any]]:
     """Carrega lembretes e exclui os muito antigos."""
     rows = sheet.get_all_records()
     reminders = []
     today = datetime.date.today()
-    
     ids_to_delete = []
 
     for r in rows:
@@ -192,10 +214,7 @@ def load_reminders() -> List[Dict[str, Any]]:
             
         reminders.append(r)
 
-    # Exclusão em lote (chamando a função individualmente)
     for reminder_id in ids_to_delete:
-        # Chamamos com force_update=False para evitar limpar o cache 
-        # a cada exclusão no loop de carregamento
         delete_reminder(reminder_id, force_update=False) 
 
     return reminders
@@ -204,12 +223,11 @@ def add_reminder(title, description, date_obj, created_by, color):
     """Adiciona um novo lembrete ao Sheet e limpa o cache."""
     new_id = str(datetime.datetime.now().timestamp())
     sheet.append_row([new_id, title, description, date_obj.isoformat(), created_by, color])
-    load_reminders.clear() # Limpa o cache para recarregar
+    load_reminders.clear() 
     
 def delete_reminder(reminder_id, force_update: bool = True):
     """Exclui um lembrete pelo ID e limpa o cache."""
     all_values = sheet.get_all_values()
-    # A primeira linha (cabeçalho) tem índice 1 no gspread
     for idx, row in enumerate(all_values, start=1):
         if len(row) > 0 and row[0] == reminder_id:
             sheet.delete_rows(idx)
@@ -254,7 +272,7 @@ def navigate_month(delta: int):
         elif new_month < 1:
             new_date = current_date.replace(year=current_date.year - 1, month=12)
     st.session_state.calendar_view_date = new_date
-    st.session_state.selected_day = None # Limpa a seleção ao mudar o mês
+    st.session_state.selected_day = None 
     
 col_prev.button("◀️ Anterior", on_click=navigate_month, args=(-1,))
 col_next.button("Próximo ▶️", on_click=navigate_month, args=(1,))
@@ -279,11 +297,11 @@ if "selected_day" not in st.session_state:
 def handle_day_click(day_iso: str):
     """Define o dia selecionado e abre/fecha a sidebar."""
     if st.session_state.selected_day == day_iso:
-        st.session_state.selected_day = None # Desseleciona se já estiver selecionado
+        st.session_state.selected_day = None 
     else:
         st.session_state.selected_day = day_iso
 
-# Renderizar dias do mês (BLOCO CORRIGIDO)
+# Renderizar dias do mês (BLOCO FINAL CORRIGIDO)
 for week in month_days:
     cols = st.columns(7, gap="small")
     for i, day in enumerate(week):
@@ -321,53 +339,55 @@ for week in month_days:
                 {content_html}
             </div>
         """
-        # Note que o </div> final será fechado pelo Streamlit/HTML
         
         with cols[i]:
-            # 1. Renderiza a célula visualmente com st.markdown.
-            # (Adicionado um placeholder de div para auxiliar o CSS)
+            # 1. Renderiza a célula visualmente (o número e os eventos)
             st.markdown(full_cell_html, unsafe_allow_html=True)
             
-            # 2. Renderiza um botão de espaço vazio (" ") que usa o CSS 
-            # '.stButton>button' para cobrir a célula e ser clicável,
-            # resolvendo o TypeError.
+            # 2. Renderiza o botão invisível que captura o clique
+            # A string " " (espaço) é o label mínimo necessário para o st.button
             if st.button(" ", key=f"btn_{day_iso}", help=f"Ver detalhes de {day}"):
                  handle_day_click(day_iso)
             
-            # Fechando o day-cell-container (feito com um markdown vazio)
+            # Fechando o day-cell-container 
             st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
-# Sidebar de detalhes (Aprimorada)
+# Sidebar de detalhes
 # ==============================
 if st.session_state.selected_day:
     day = datetime.date.fromisoformat(st.session_state.selected_day)
     day_reminders = get_reminders_for_day(reminders, day)
     
-    st.sidebar.markdown(f"## 📌 Detalhes: {day.strftime('%d/%m/%Y')}")
+    st.sidebar.markdown(f"## 📌 Eventos: {day.strftime('%d/%m/%Y')}")
     
     if day_reminders:
         for r in day_reminders:
             card_style = f"border-color: {r['color']};"
-            st.sidebar.markdown(
-                f"""
-                <div class="reminder-card" style="{card_style}">
-                    <b>{r['title']}</b>
-                    <p style='margin: 4px 0 6px 0;'><small>{r['description'] or 'Sem descrição'}</small></p>
-                    <hr style='margin: 4px 0; border-top: 1px solid #eee;'>
-                    <small>Criado por: <i>{r['created_by']}</i></small>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
             
-            # Botão de exclusão funcional.
-            delete_col, _ = st.sidebar.columns([1, 4])
-            if delete_col.button("🗑️ Excluir", key=f"del_{r['id']}", help="Excluir Lembrete Permanentemente"):
-                 delete_reminder(r["id"])
-                 st.session_state.selected_day = None # Limpa a seleção
-                 st.rerun() 
+            # Usa um st.form dentro da sidebar para isolar o botão de exclusão
+            # e evitar o problema de estado do Streamlit.
+            with st.sidebar.form(key=f"delete_form_{r['id']}"):
+                st.markdown(
+                    f"""
+                    <div class="reminder-card" style="{card_style}">
+                        <div style="color: white;"><b>{r['title']}</b></div>
+                        <p style='margin: 4px 0 6px 0; color: #ccc;'><small>{r['description'] or 'Sem descrição'}</small></p>
+                        <hr style='margin: 4px 0; border-top: 1px solid #444;'>
+                        <small style="color: #ccc;">Criado por: <i>{r['created_by']}</i></small>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+                # Botão de exclusão dentro do formulário
+                submitted_delete = st.form_submit_button("🗑️ Excluir Evento", help="Excluir Lembrete Permanentemente")
+                
+                if submitted_delete:
+                     delete_reminder(r["id"])
+                     st.session_state.selected_day = None 
+                     st.rerun() 
     else:
          st.sidebar.info("Nenhum evento registrado para esta data.")
 
