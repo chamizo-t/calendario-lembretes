@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Máximo Refinamento e Correção de UI)
+# Estilos customizados (Revisão para Dia Atual sem Cor de Fundo)
 # ==============================
 st.markdown(
     """
@@ -58,7 +58,7 @@ st.markdown(
         background: #c0392b !important;
     }
 
-    /* --- CALENDÁRIO: Correção do Botão Estranho --- */
+    /* --- CALENDÁRIO --- */
     .day-cell-wrapper {
         position: relative; 
         width: 100%;
@@ -80,22 +80,42 @@ st.markdown(
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        pointer-events: none; /* Garante que o clique vá para o botão */
+        pointer-events: none;
     }
 
-    /* Dia atual, outro mês e selecionado (estilos visuais) */
-    .today-style { background-color: #e3f2fd !important; border: 2px solid #4b89dc !important; }
+    /* Dia de outro mês e selecionado (estilos visuais) */
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; }
     .selected-style { border: 2px solid #ff4b4b !important; background-color: #ffe0e0 !important; }
 
     /* Número do dia */
-    .day-number {
+    .day-number-container {
         font-weight: bold;
         font-size: 14px; 
         margin-bottom: 4px;
-        color: #1f2937; 
+        color: #1f2937;
+        padding: 1px; /* Espaçamento interno */
+        transition: all 0.2s;
+        line-height: 1.4; /* Centraliza verticalmente o número */
     }
-    .day-other-month-style .day-number { color: #6b7280; }
+    .day-other-month-style .day-number-container { color: #6b7280; }
+    
+    /* --- NOVO ESTILO: DIA ATUAL (Anel Azul) --- */
+    .today-style .day-number-container {
+        background-color: transparent !important;
+        color: #4b89dc !important;
+        border: 2px solid #4b89dc; /* Anel */
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* --- NOVO ESTILO: DIA COM EVENTO (Para cursor) --- */
+    .has-reminders {
+        cursor: pointer;
+    }
 
     /* Texto do lembrete */
     .reminder-title {
@@ -119,8 +139,6 @@ st.markdown(
         border: none;
         box-shadow: none;
         cursor: pointer;
-        
-        /* Posição para sobrepor a célula de forma embutida */
         position: absolute;
         top: 0;
         left: 0;
@@ -134,7 +152,7 @@ st.markdown(
     .stButton>button:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        background: rgba(75, 137, 220, 0.1) !important; /* Efeito hover suave */
+        background: rgba(75, 137, 220, 0.1) !important; 
     }
     
     .st-emotion-cache-1n76cwh a{ display: none !important; }
@@ -259,7 +277,7 @@ def handle_day_click(day_iso: str):
     else:
         st.session_state.selected_day = day_iso
 
-# Renderizar dias do mês (BLOCO FINAL DE INTEGRAÇÃO DO CLIQUE E CORREÇÃO DO ERRO)
+# Renderizar dias do mês (BLOCO FINAL)
 for week in month_days:
     cols = st.columns(7, gap="small")
     for i, day in enumerate(week):
@@ -277,9 +295,14 @@ for week in month_days:
         
         if day_iso == st.session_state.selected_day:
             classes += " selected-style" 
+
+        # Adiciona classe para mudar o cursor se houver lembretes
+        if day_reminders:
+            classes += " has-reminders"
         
-        # HTML do CONTEÚDO da célula (o visual que fica abaixo do botão)
-        content_html = f"<div class='day-number'>{day.day}</div>"
+        # HTML do CONTEÚDO da célula
+        # O número do dia está envolto no day-number-container para o anel do dia atual
+        content_html = f"<div class='day-number-container'>{day.day}</div>"
 
         # Títulos dos lembretes (máx 2)
         for r in day_reminders[:2]:
@@ -300,10 +323,11 @@ for week in month_days:
             # 1. Renderiza o visual da célula com st.markdown.
             st.markdown(full_cell_wrapper_html, unsafe_allow_html=True)
             
-            # 2. Renderiza o botão de clique com um rótulo simples (um espaço).
-            # O CSS garante que este botão seja transparente, cubra a célula e capture o clique.
-            # ISTO CORRIGE O TypeError.
-            if st.button(" ", key=f"btn_{day_iso}", help=f"Ver detalhes de {day}"):
+            # 2. Renderiza o botão de clique. O rótulo " " garante que o TypeError não ocorra.
+            # O Streamlit ainda precisa de um "label" (rótulo) simples para criar o botão.
+            # O CSS (acima) esconde esse label e faz o botão cobrir a célula.
+            # O 'help' é o que aparece no tooltip, o Streamlit não mostra mais "Ver detalhes" por padrão.
+            if st.button(" ", key=f"btn_{day_iso}", help=f"Ver detalhes do dia {day.day}"):
                  handle_day_click(day_iso)
             
             # 3. Fecha o wrapper
