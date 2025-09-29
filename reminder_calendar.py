@@ -16,6 +16,7 @@ def init_db():
             description TEXT,
             date TEXT NOT NULL,
             created_by TEXT,
+            color TEXT,
             created_at TEXT
         )
     """)
@@ -24,11 +25,11 @@ def init_db():
 
 conn = init_db()
 
-def add_reminder(title, description, date_str, created_by):
+def add_reminder(title, description, date_str, created_by, color):
     c = conn.cursor()
     c.execute(
-        "INSERT INTO reminders (title, description, date, created_by, created_at) VALUES (?,?,?,?,?)",
-        (title, description, date_str, created_by, datetime.utcnow().isoformat())
+        "INSERT INTO reminders (title, description, date, created_by, color, created_at) VALUES (?,?,?,?,?,?)",
+        (title, description, date_str, created_by, color, datetime.utcnow().isoformat())
     )
     conn.commit()
 
@@ -55,14 +56,14 @@ def cleanup_old_reminders():
 def get_reminders_between(start_date, end_date):
     c = conn.cursor()
     c.execute(
-        "SELECT id, title, description, date, created_by FROM reminders WHERE date BETWEEN ? AND ? ORDER BY date",
+        "SELECT id, title, description, date, created_by, color FROM reminders WHERE date BETWEEN ? AND ? ORDER BY date",
         (start_date.isoformat(), end_date.isoformat())
     )
     return c.fetchall()
 
 def get_all_reminders():
     c = conn.cursor()
-    c.execute("SELECT id, title, description, date, created_by FROM reminders ORDER BY date")
+    c.execute("SELECT id, title, description, date, created_by, color FROM reminders ORDER BY date")
     return c.fetchall()
 
 # --- UI ---
@@ -79,12 +80,13 @@ with st.sidebar.form("form_add"):
     description = st.text_area("Descrição (opcional)", height=80)
     d = st.date_input("Data do lembrete", value=date.today())
     created_by = st.text_input("Seu nome", value="Anônimo")
+    color = st.color_picker("Cor do usuário", "#87CEEB")  # Azul padrão
     submitted = st.form_submit_button("Salvar")
     if submitted:
         if not title.strip():
             st.sidebar.error("Por favor, informe um título.")
         else:
-            add_reminder(title.strip(), description.strip(), d.isoformat(), created_by.strip() or "Anônimo")
+            add_reminder(title.strip(), description.strip(), d.isoformat(), created_by.strip() or "Anônimo", color)
             st.sidebar.success(f"Lembrete salvo para {d.isoformat()}")
 
 # Controle de visualização
@@ -104,16 +106,17 @@ last_day = month_days[-1][-1]
 rows = get_reminders_between(first_day, last_day)
 
 rem_by_date = {}
-for rid, title_r, desc_r, date_r, created_by_r in rows:
+for rid, title_r, desc_r, date_r, created_by_r, color_r in rows:
     dobj = datetime.fromisoformat(date_r).date()
     rem_by_date.setdefault(dobj, []).append({
         "id": rid,
         "title": title_r,
         "desc": desc_r,
-        "by": created_by_r
+        "by": created_by_r,
+        "color": color_r
     })
 
-# Renderizar calendário (responsivo)
+# Renderizar calendário (com cores de usuários)
 weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 cols = st.columns(7)
 for i, wd in enumerate(weekdays):
@@ -123,8 +126,22 @@ for week in month_days:
     cols = st.columns(7)
     for i, day in enumerate(week):
         with cols[i]:
-            style = "background:#ffd966; padding:4px; border-radius:6px;" if day == date.today() else ""
-            st.markdown(f"<div style='{style}'><b>{day.day}</b></div>", unsafe_allow_html=True)
+            if day in rem_by_date:
+                # Se vários usuários no mesmo dia → degradê
+                colors = [item["color"] for item in rem_by_date[day]]
+                if len(colors) == 1:
+                    bg = colors[0]
+                else:
+                    gradient = ",".join(colors)
+                    bg = f"linear-gradient(90deg,{gradient})"
+                st.markdown(
+                    f"<div style='background:{bg}; padding:4px; border-radius:6px; text-align:center; color:#000'><b>{day.day}</b></div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                # Destacar hoje sem lembrete
+                style = "background:#ffd966; padding:4px; border-radius:6px;" if day == date.today() else ""
+                st.markdown(f"<div style='{style}'><b>{day.day}</b></div>", unsafe_allow_html=True)
 
             if day in rem_by_date:
                 for item in rem_by_date[day]:
@@ -147,10 +164,4 @@ for week in month_days:
 st.markdown("---")
 st.subheader("📋 Todos os lembretes")
 for r in get_all_reminders():
-    st.write(f"- {r[3]} — **{r[1]}** (por {r[4]})")
-
-
-
-st.info("Dica: para compartilhar com o time, hospede este arquivo (Streamlit Cloud / Heroku / VPS) e envie o link.")
-
-
+    st.write(f"- {r[3]} — **{r[1]}** (por {r[4]}) 🎨 cor: {r[5]}")
