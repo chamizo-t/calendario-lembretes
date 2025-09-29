@@ -5,7 +5,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ==============================
-# Configurações
+# Configurações da página
 # ==============================
 st.set_page_config(page_title="📆 Calendário de Lembretes", layout="wide")
 
@@ -20,60 +20,57 @@ st.markdown(
         font-family: 'Segoe UI', sans-serif;
     }
 
-    /* Dias do calendário */
+    /* Células quadradas */
     .day-cell {
-        border-radius: 8px;
-        padding: 6px;
+        border-radius: 6px;
+        width: 60px;
+        height: 60px;
         text-align: center;
         transition: all 0.2s ease;
         cursor: pointer;
-        font-weight: 500;
-        min-height: 70px;
-        max-height: 90px;
+        font-size: 12px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        justify-content: center;
         align-items: center;
-        font-size: 13px;
+        margin: auto;
     }
     .day-cell:hover {
-        transform: scale(1.03);
-        box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+        transform: scale(1.05);
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
     }
 
     /* Dia atual */
     .today {
-        background-color: rgba(255, 217, 102, 0.25);
-        border: 2px solid #f1c232;
+        background-color: rgba(255, 217, 102, 0.3);
+        border: 1px solid #f1c232;
     }
 
-    /* Título do lembrete dentro do quadrado */
-    .reminder-title {
+    /* Botões de lembrete no calendário */
+    .reminder-btn {
+        font-size: 10px !important;
+        padding: 2px 4px !important;
         margin-top: 2px;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 1px 3px;
-        border-radius: 5px;
-        color: white;
+        border-radius: 4px;
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
-        max-width: 95%;
-        cursor: pointer;
+        max-width: 55px;
     }
 
-    /* Sidebar moderna */
+    /* Sidebar compacta */
     section[data-testid="stSidebar"] {
         background: #2c3e50;
         color: white;
-        border-left: 2px solid #1a252f;
-        padding: 1rem;
+        border-left: 1px solid #1a252f;
+        padding: 0.5rem;
+        font-size: 13px;
     }
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] p {
-        color: white !important;
+    section[data-testid="stSidebar"] div.reminder-card {
+        padding: 6px;
+        margin-bottom: 6px;
+        border-radius: 6px;
+        font-size: 12px;
     }
     </style>
     """,
@@ -88,7 +85,7 @@ creds_dict = st.secrets["gcp_service_account"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
+SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"  # ID da sua planilha
 sh = client.open_by_key(SPREADSHEET_ID)
 sheet = sh.sheet1
 
@@ -106,6 +103,7 @@ def load_reminders():
             date_obj = datetime.date.fromisoformat(r["date"])
         except:
             continue
+        # expira após 10 dias
         if date_obj < today - datetime.timedelta(days=10):
             delete_reminder(r["id"])
             continue
@@ -139,6 +137,8 @@ cal = calendar.Calendar(firstweekday=0)
 month_days = cal.monthdatescalendar(year, month)
 
 st.subheader(f"{calendar.month_name[month]} {year}")
+
+# Cabeçalho dos dias da semana
 weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
 cols = st.columns(7)
 for i, wd in enumerate(weekdays):
@@ -148,6 +148,7 @@ for i, wd in enumerate(weekdays):
 if "selected_day" not in st.session_state:
     st.session_state.selected_day = None
 
+# Renderizar dias do mês
 for week in month_days:
     cols = st.columns(7, gap="small")
     for i, day in enumerate(week):
@@ -157,16 +158,15 @@ for week in month_days:
             if day == today:
                 classes += " today"
 
-            # Renderiza o dia
+            # Dia
             st.markdown(f"<div class='{classes}'>{day.day}</div>", unsafe_allow_html=True)
 
-            # Renderiza lembretes como botões clicáveis
+            # Lembretes como botões
             for r in day_reminders[:2]:
-                if st.button(r["title"], key=f"{r['id']}_{day}", help="Clique para ver detalhes", use_container_width=True):
+                if st.button(r["title"], key=f"{r['id']}_{day}", help="Clique para ver detalhes"):
                     st.session_state.selected_day = day.isoformat()
-
             if len(day_reminders) > 2:
-                st.caption(f"+{len(day_reminders)-2} mais...")
+                st.caption(f"+{len(day_reminders)-2}")
 
 # ==============================
 # Sidebar de detalhes
@@ -178,10 +178,10 @@ if st.session_state.selected_day:
     for r in day_reminders:
         st.sidebar.markdown(
             f"""
-            <div style="padding:8px;margin-bottom:8px;border-radius:8px;background:{r['color']};color:white;">
+            <div class="reminder-card" style="background:{r['color']};color:white;">
                 <b>{r['title']}</b><br>
-                {r['description']}<br>
-                <i>por {r['created_by']}</i>
+                <small>{r['description']}</small><br>
+                <i>{r['created_by']}</i>
             </div>
             """,
             unsafe_allow_html=True
