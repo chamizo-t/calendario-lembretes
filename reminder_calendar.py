@@ -11,44 +11,27 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Máximo Refinamento)
+# Estilos customizados (Máximo Refinamento e Consolidação)
 # ==============================
 st.markdown(
     """
     <style>
-    /* Estilos globais para a aplicação */
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f7f9fc;
-    }
-
-    h1, h2, h3 {
-        text-align: center;
-        font-family: 'Inter', sans-serif;
-        color: #1f2937;
-    }
-
-    /* Título principal */
-    .st-emotion-cache-10trblm {
-        color: #4b89dc !important; /* Cor principal da paleta */
-    }
+    /* Estilos globais */
+    body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
+    h1, h2, h3 { text-align: center; color: #1f2937; }
+    .st-emotion-cache-10trblm { color: #4b89dc !important; }
 
     /* --- SIDEBAR ESCURA E PROFISSIONAL --- */
     section[data-testid="stSidebar"] {
-        background: #2c3e50; /* Fundo escuro */
+        background: #2c3e50;
         color: white;
         border-right: 1px solid #1a252f;
         box-shadow: 2px 0 5px rgba(0,0,0,0.15);
     }
-    /* Cores do texto e títulos na sidebar */
-    section[data-testid="stSidebar"] * {
-        color: white; 
+    section[data-testid="stSidebar"] * { color: white; }
+    section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3 {
+        color: #79a6dc;
     }
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3 {
-        color: #79a6dc; /* Azul claro para títulos */
-    }
-    /* Cards de Lembrete na Sidebar */
     section[data-testid="stSidebar"] div.reminder-card {
         padding: 10px;
         margin-bottom: 8px;
@@ -56,10 +39,11 @@ st.markdown(
         font-size: 13px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         border-left: 5px solid; 
-        background-color: #34495e; /* Fundo um pouco mais claro que a sidebar */
+        background-color: #34495e;
     }
-    /* Botão de Excluir no Card */
-    .delete-button-container button {
+
+    /* Estilo do form/botão de exclusão na sidebar */
+    section[data-testid="stSidebar"] .stButton button {
         background: #e74c3c !important; 
         color: white !important;
         border-radius: 5px;
@@ -67,48 +51,86 @@ st.markdown(
         font-size: 11px;
         line-height: 1;
         transition: background 0.2s;
+        width: auto !important; /* Desfaz o width 100% dos botões de célula */
+        position: relative;
+        z-index: 20;
     }
-    .delete-button-container button:hover {
+    section[data-testid="stSidebar"] .stButton button:hover {
         background: #c0392b !important;
     }
-    
-    /* --- CALENDÁRIO --- */
+
+    /* --- CALENDÁRIO: A Célula é o Botão --- */
+    /* Container que garante o formato quadrado */
     .day-cell-container {
         position: relative; 
         width: 100%;
         aspect-ratio: 1 / 1;
         margin: 0 auto;
-        padding: 0;
     }
 
-    .day-cell {
+    /* O estilo da Célula que o botão deve imitar */
+    .calendar-cell-content {
+        /* Estilo base da célula */
         border: 1px solid #e5e7eb;
         border-radius: 8px; 
         width: 100%; 
         height: 100%;
         text-align: center;
         transition: all 0.3s ease;
-        font-size: 12px;
+        padding: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background-color: white;
+        
+        /* Layout interno */
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        padding: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        background-color: white; /* Fundo branco para células */
-        pointer-events: none; /* Garante que o clique vá para o botão invisível */
     }
 
+    /* Estilo para cobrir o botão Streamlit */
+    .stButton>button {
+        /* Garante que o botão cubra a área e seja invisível */
+        background: transparent !important; 
+        border: none;
+        box-shadow: none;
+        
+        /* Garante que o conteúdo HTML/CSS da célula seja exibido */
+        position: absolute; /* Posição para cobrir o conteúdo */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10; 
+        
+        /* Remove o texto estranho do botão, mantendo o HTML do rótulo */
+        color: transparent !important;
+        
+        /* Efeito de hover */
+        transition: all 0.2s;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 1px solid #4b89dc;
+    }
+    
     /* Dia atual */
-    .today {
+    .today-style {
         background-color: #e3f2fd !important; 
         border: 2px solid #4b89dc !important; 
     }
     
     /* Dia de outro mês */
-    .day-other-month {
+    .day-other-month-style {
         opacity: 0.5;
         background-color: #f7f9fc !important;
+    }
+    
+    /* Célula selecionada */
+    .selected-style {
+        border: 2px solid #ff4b4b !important; 
+        background-color: #ffe0e0 !important;
     }
 
     /* Número do dia - MUITO IMPORTANTE: Garante que seja visível */
@@ -116,9 +138,9 @@ st.markdown(
         font-weight: bold;
         font-size: 14px; 
         margin-bottom: 4px;
-        color: #1f2937; /* Cor escura e forte */
+        color: #1f2937; 
     }
-    .day-other-month .day-number {
+    .day-other-month-style .day-number {
         color: #6b7280;
     }
 
@@ -137,44 +159,20 @@ st.markdown(
         text-shadow: 0 0 1px rgba(0,0,0,0.3);
     }
     
-    /* Botão transparente sobre a célula */
-    .stButton>button {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        margin: 0;
-        background: transparent !important; 
-        color: transparent !important;
-        border: none;
-        box-shadow: none;
-        cursor: pointer;
-        z-index: 10; 
-        transition: background 0.2s; /* Adicionado para um hover suave */
-    }
-    .stButton>button:hover {
-        background: rgba(0, 78, 149, 0.1) !important; /* Efeito de hover azul claro */
-        border: 1px solid rgba(75, 137, 220, 0.5); /* Borda suave no hover */
-    }
-    
-    .st-emotion-cache-1n76cwh a{
-        display: none !important;
-    }
+    /* Remove artefatos de âncora */
+    .st-emotion-cache-1n76cwh a{ display: none !important; }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # ==============================
-# Conexão Google Sheets
+# Conexão Google Sheets (Funções de Conexão e CRUD - Mantidas)
 # ==============================
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 @st.cache_resource
 def get_gspread_client():
-    """Autoriza e retorna o cliente gspread."""
     try:
         creds_dict = st.secrets["gcp_service_account"]
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
@@ -187,12 +185,8 @@ def get_gspread_client():
 
 sheet = get_gspread_client()
 
-# ==============================
-# Funções (Com otimização de cache)
-# ==============================
 @st.cache_data(ttl=60) 
 def load_reminders() -> List[Dict[str, Any]]:
-    """Carrega lembretes e exclui os muito antigos."""
     rows = sheet.get_all_records()
     reminders = []
     today = datetime.date.today()
@@ -200,13 +194,11 @@ def load_reminders() -> List[Dict[str, Any]]:
 
     for r in rows:
         required_keys = ["id","title","description","date","created_by","color"]
-        if not all(k in r for k in required_keys):
-            continue
+        if not all(k in r for k in required_keys): continue
         
         try:
             date_obj = datetime.date.fromisoformat(r["date"])
-        except ValueError:
-            continue
+        except ValueError: continue
             
         if date_obj < today - datetime.timedelta(days=10):
             ids_to_delete.append(r["id"])
@@ -220,13 +212,11 @@ def load_reminders() -> List[Dict[str, Any]]:
     return reminders
 
 def add_reminder(title, description, date_obj, created_by, color):
-    """Adiciona um novo lembrete ao Sheet e limpa o cache."""
     new_id = str(datetime.datetime.now().timestamp())
     sheet.append_row([new_id, title, description, date_obj.isoformat(), created_by, color])
     load_reminders.clear() 
     
 def delete_reminder(reminder_id, force_update: bool = True):
-    """Exclui um lembrete pelo ID e limpa o cache."""
     all_values = sheet.get_all_values()
     for idx, row in enumerate(all_values, start=1):
         if len(row) > 0 and row[0] == reminder_id:
@@ -236,32 +226,27 @@ def delete_reminder(reminder_id, force_update: bool = True):
             break
 
 def get_reminders_for_day(reminders: List[Dict], day: datetime.date) -> List[Dict[str, Any]]:
-    """Filtra lembretes para um dia específico."""
     return [r for r in reminders if r["date"] == day.isoformat()]
 
 # ==============================
-# Interface Principal
+# Interface Principal (Fluxo de Navegação Mantido)
 # ==============================
 
 st.title("🗓️ **Calendário de Eventos**")
 
 reminders = load_reminders()
-
 today = datetime.date.today()
 
-# Estado para navegação do calendário
 if "calendar_view_date" not in st.session_state:
     st.session_state.calendar_view_date = today
 
 year, month = st.session_state.calendar_view_date.year, st.session_state.calendar_view_date.month
-cal = calendar.Calendar(firstweekday=0) # 0 = Segunda-feira
+cal = calendar.Calendar(firstweekday=0) 
 month_days = cal.monthdatescalendar(year, month)
 
-# Controles de navegação
 col_prev, col_month, col_next = st.columns([1, 4, 1])
 
 def navigate_month(delta: int):
-    """Função para mudar o mês e limpar a seleção de dia."""
     current_date = st.session_state.calendar_view_date
     new_month = current_date.month + delta
     try:
@@ -277,31 +262,26 @@ def navigate_month(delta: int):
 col_prev.button("◀️ Anterior", on_click=navigate_month, args=(-1,))
 col_next.button("Próximo ▶️", on_click=navigate_month, args=(1,))
 
-# Título do mês
 month_name_pt = calendar.month_name[month].capitalize()
 col_month.subheader(f"{month_name_pt} {year}")
 
 st.markdown("---")
 
-# Cabeçalho dos dias da semana
 weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
 week_cols = st.columns(7, gap="small")
 for i, wd in enumerate(weekdays):
     week_cols[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #4b89dc;'>{wd}</div>", unsafe_allow_html=True)
 
-# Estado para dia clicado
 if "selected_day" not in st.session_state:
     st.session_state.selected_day = None
 
-# Função de callback para clique no dia
 def handle_day_click(day_iso: str):
-    """Define o dia selecionado e abre/fecha a sidebar."""
     if st.session_state.selected_day == day_iso:
         st.session_state.selected_day = None 
     else:
         st.session_state.selected_day = day_iso
 
-# Renderizar dias do mês (BLOCO FINAL CORRIGIDO)
+# Renderizar dias do mês (BLOCO FINAL DE INTEGRAÇÃO DO CLIQUE)
 for week in month_days:
     cols = st.columns(7, gap="small")
     for i, day in enumerate(week):
@@ -309,18 +289,16 @@ for week in month_days:
         day_reminders = get_reminders_for_day(reminders, day)
         
         # Classes CSS
-        classes = "day-cell"
-        cell_style = ""
+        classes = "calendar-cell-content"
         
         if day.month != month:
-            classes += " day-other-month"
+            classes += " day-other-month-style"
             
         if day == today:
-            classes += " today"
+            classes += " today-style"
         
-        # Estilo de seleção visual
         if day_iso == st.session_state.selected_day:
-            cell_style = "border: 2px solid #ff4b4b; background-color: #ffe0e0;" 
+            classes += " selected-style" 
         
         # HTML do CONTEÚDO da célula
         content_html = f"<div class='day-number'>{day.day}</div>"
@@ -332,29 +310,28 @@ for week in month_days:
         if len(day_reminders) > 2:
             content_html += f"<div class='reminder-title' style='background-color:#ccc; color:#333 !important;'>+{len(day_reminders)-2}</div>"
 
-        # HTML COMPLETO da célula (o visual)
+        # HTML COMPLETO da célula (o visual a ser injetado no botão)
+        # O Streamlit ainda precisa que o rótulo do botão seja uma string única
+        # que contenha o HTML. Envolvemos tudo no day-cell-container.
         full_cell_html = f"""
         <div class='day-cell-container'>
-            <div class='{classes}' style='{cell_style}'>
+            <div class='{classes}'>
                 {content_html}
             </div>
+        </div>
         """
         
         with cols[i]:
-            # 1. Renderiza a célula visualmente (o número e os eventos)
-            st.markdown(full_cell_html, unsafe_allow_html=True)
-            
-            # 2. Renderiza o botão invisível que captura o clique
-            # A string " " (espaço) é o label mínimo necessário para o st.button
-            if st.button(" ", key=f"btn_{day_iso}", help=f"Ver detalhes de {day}"):
+            # **SOLUÇÃO FINAL:** Passamos o HTML completo como rótulo. 
+            # O CSS é ajustado para que o botão Streamlit desapareça, 
+            # e a classe da célula (calendar-cell-content) ocupe o espaço e estilize.
+            # O clique agora é inerente à área visual da célula.
+            if st.button(full_cell_html, key=f"btn_{day_iso}", help=f"Ver detalhes de {day}", unsafe_allow_html=True):
                  handle_day_click(day_iso)
-            
-            # Fechando o day-cell-container 
-            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
-# Sidebar de detalhes
+# Sidebar de detalhes (Fluxo de Detalhes Mantido)
 # ==============================
 if st.session_state.selected_day:
     day = datetime.date.fromisoformat(st.session_state.selected_day)
@@ -366,8 +343,6 @@ if st.session_state.selected_day:
         for r in day_reminders:
             card_style = f"border-color: {r['color']};"
             
-            # Usa um st.form dentro da sidebar para isolar o botão de exclusão
-            # e evitar o problema de estado do Streamlit.
             with st.sidebar.form(key=f"delete_form_{r['id']}"):
                 st.markdown(
                     f"""
@@ -381,7 +356,6 @@ if st.session_state.selected_day:
                     unsafe_allow_html=True
                 )
                 
-                # Botão de exclusão dentro do formulário
                 submitted_delete = st.form_submit_button("🗑️ Excluir Evento", help="Excluir Lembrete Permanentemente")
                 
                 if submitted_delete:
@@ -393,7 +367,7 @@ if st.session_state.selected_day:
 
 
 # ==============================
-# Formulário de Novo Lembrete
+# Formulário de Novo Lembrete (Mantido)
 # ==============================
 st.markdown("---")
 st.subheader("➕ Adicionar Novo Evento")
