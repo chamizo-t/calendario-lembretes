@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import calendar
 import streamlit as st
 
@@ -45,6 +45,13 @@ def delete_reminder(rid):
     c.execute("DELETE FROM reminders WHERE id=?", (rid,))
     conn.commit()
 
+def cleanup_old_reminders():
+    """Remove lembretes com mais de 10 dias após a data do evento"""
+    cutoff = (date.today() - timedelta(days=10)).isoformat()
+    c = conn.cursor()
+    c.execute("DELETE FROM reminders WHERE date < ?", (cutoff,))
+    conn.commit()
+
 def get_reminders_between(start_date, end_date):
     c = conn.cursor()
     c.execute(
@@ -61,6 +68,9 @@ def get_all_reminders():
 # --- UI ---
 st.set_page_config(page_title="Calendário de Lembretes", layout="wide")
 st.title("📆 Calendário de Lembretes — colaborativo")
+
+# Limpeza automática
+cleanup_old_reminders()
 
 # Sidebar: criar lembrete
 st.sidebar.header("➕ Adicionar lembrete")
@@ -103,29 +113,23 @@ for rid, title_r, desc_r, date_r, created_by_r in rows:
         "by": created_by_r
     })
 
-# Renderizar calendário
+# Renderizar calendário (responsivo)
 weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-hd = st.columns(7)
+cols = st.columns(7)
 for i, wd in enumerate(weekdays):
-    hd[i].markdown(f"**{wd}**")
+    cols[i].markdown(f"**{wd}**")
 
 for week in month_days:
     cols = st.columns(7)
     for i, day in enumerate(week):
         with cols[i]:
-            # Destacar hoje
-            if day == date.today():
-                st.markdown(f"<div style='background:#ffd966; padding:4px; border-radius:6px;'><b>{day.day}</b></div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"**{day.day}**")
+            style = "background:#ffd966; padding:4px; border-radius:6px;" if day == date.today() else ""
+            st.markdown(f"<div style='{style}'><b>{day.day}</b></div>", unsafe_allow_html=True)
 
-            # Mostrar lembretes
             if day in rem_by_date:
                 for item in rem_by_date[day]:
-                    with st.expander(f"🔔 {item['title']} (por {item['by']})"):
+                    with st.expander(f"🔔 {item['title']} (por {item['by']})", expanded=False):
                         st.write(item["desc"] if item["desc"] else "_(sem descrição)_")
-
-                        # Botões de ação
                         col1, col2 = st.columns(2)
                         with col1:
                             if st.button("✏️ Editar", key=f"edit-{item['id']}"):
@@ -146,5 +150,7 @@ for r in get_all_reminders():
     st.write(f"- {r[3]} — **{r[1]}** (por {r[4]})")
 
 
+
 st.info("Dica: para compartilhar com o time, hospede este arquivo (Streamlit Cloud / Heroku / VPS) e envie o link.")
+
 
