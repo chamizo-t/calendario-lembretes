@@ -115,19 +115,20 @@ st.markdown(
     
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
 
-    /* Número do dia - NOVO: Centralizado no topo com largura de 100% para centralizar o texto */
+    /* Número do dia - NOVO: Centralizado no topo com transform */
     .day-number-container {
         position: absolute; 
-        top: 4px; 
-        left: 0;
-        text-align: center; /* Centraliza o número */
+        top: 4px; /* Ajuste a distância do topo se necessário */
+        left: 50%;
+        transform: translateX(-50%); /* Centraliza horizontalmente */
         font-weight: bold;
         font-size: 14px; 
         color: #1f2937;
         padding: 0; 
         line-height: 1.4;
         z-index: 2;
-        width: 100%; /* Força a largura para centralizar */
+        width: auto; /* Deixa a largura automática para o transform funcionar melhor */
+        text-align: center; /* Garante que o texto fique centrado */
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
@@ -138,7 +139,7 @@ st.markdown(
     /* --- FAIXA DE EVENTO --- */
     .reminder-strip {
         position: absolute;
-        bottom: 30px; /* Posição acima do botão Detalhes */
+        bottom: 24px; /* Ajuste para ficar logo acima do botão Detalhes (22px altura do botão + 2px de margem) */
         left: 0;
         width: 100%;
         height: 20px; 
@@ -162,7 +163,7 @@ st.markdown(
         max-width: 95%;
     }
     
-    /* --- BOTÃO DETALHES (AJUSTADO) --- */
+    /* --- BOTÃO DETALHES --- */
     /* Container do botão st.button: Reduz o padding lateral do Streamlit para encaixar melhor */
     .day-cell-wrapper div[data-testid="stButton"] {
         position: absolute;
@@ -170,11 +171,13 @@ st.markdown(
         left: 0;
         width: 100%;
         margin: 0 !important;
-        padding: 4px 5px !important; /* Reduz o padding lateral */
+        padding: 4px 5px !important; 
         z-index: 4;
+        display: flex; 
+        justify-content: center;
     }
     
-    /* Botão em si: Define um max-width e garante que seja pequeno */
+    /* Botão em si: Define um tamanho fixo */
     .day-cell-wrapper button.details-btn {
         font-size: 10px;
         padding: 1px 4px;
@@ -186,7 +189,7 @@ st.markdown(
         transition: all 0.2s;
         height: 22px; 
         line-height: 1;
-        width: 100%; /* Ocupa a largura total do contêiner (que tem padding) */
+        width: 100%; 
         max-width: 100%;
         text-align: center;
     }
