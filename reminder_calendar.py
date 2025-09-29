@@ -115,23 +115,22 @@ st.markdown(
     
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
 
-    /* Número do dia - NOVO: Centralizado no topo */
+    /* Número do dia - NOVO: Centralizado no topo com largura de 100% para centralizar o texto */
     .day-number-container {
         position: absolute; 
-        top: 4px; /* Ajuste para o padding interno */
-        left: 50%;
-        transform: translateX(-50%); /* Centraliza horizontalmente */
+        top: 4px; 
+        left: 0;
+        text-align: center; /* Centraliza o número */
         font-weight: bold;
         font-size: 14px; 
         color: #1f2937;
         padding: 0; 
         line-height: 1.4;
         z-index: 2;
-        width: auto;
+        width: 100%; /* Força a largura para centralizar */
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
-    /* Indicador de dia de hoje */
     .today-style .day-number-container > span {
         color: #4b89dc !important;
     }
@@ -164,21 +163,18 @@ st.markdown(
     }
     
     /* --- BOTÃO DETALHES (AJUSTADO) --- */
-    /* Container do botão st.button */
+    /* Container do botão st.button: Reduz o padding lateral do Streamlit para encaixar melhor */
     .day-cell-wrapper div[data-testid="stButton"] {
         position: absolute;
         bottom: 0px;
-        left: 50%; /* Começa no meio */
-        transform: translateX(-50%); /* Centraliza */
-        width: 90%; /* Limita a largura para caber com padding */
+        left: 0;
+        width: 100%;
         margin: 0 !important;
-        padding: 4px 0px 4px 0px; /* Ajusta o padding para a centralização */
+        padding: 4px 5px !important; /* Reduz o padding lateral */
         z-index: 4;
-        display: flex; /* Garante que o botão fique centralizado no contêiner */
-        justify-content: center;
     }
     
-    /* Botão em si */
+    /* Botão em si: Define um max-width e garante que seja pequeno */
     .day-cell-wrapper button.details-btn {
         font-size: 10px;
         padding: 1px 4px;
@@ -188,9 +184,9 @@ st.markdown(
         color: #333 !important; 
         border: 1px solid #ccc !important;
         transition: all 0.2s;
-        height: 22px; /* Aumentado ligeiramente para melhor clique */
+        height: 22px; 
         line-height: 1;
-        width: 100%; /* Ocupa a largura de 90% definida acima */
+        width: 100%; /* Ocupa a largura total do contêiner (que tem padding) */
         max-width: 100%;
         text-align: center;
     }
@@ -305,7 +301,8 @@ for week in month_days:
                 
                 # 3. Botão Detalhes (Posição absoluta na base)
                 btn_key_details = f"details_btn_{day_iso}"
-                # Note: use_container_width=True aqui não é necessário, pois controlamos o width no CSS
+                
+                # Usamos um contêiner Streamlit normal, mas ajustamos seu estilo no CSS
                 if st.button("Detalhes", key=btn_key_details):
                     handle_details_click(day_iso)
                 
