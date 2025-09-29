@@ -10,18 +10,21 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="Calendário de Lembretes", layout="wide")
 
 # ==============================
-# Conexão com Google Sheets
+# Conexão com Google Sheets via ID
 # ==============================
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds_dict = st.secrets["gcp_service_account"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-SHEET_NAME = "Reminders"
+# Cole o ID da sua planilha aqui
+SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
+
 try:
-    sheet = client.open(SHEET_NAME).sheet1
-except Exception:
-    st.error(f"⚠️ Não achei a planilha chamada **{SHEET_NAME}**. Crie ela no Google Sheets e compartilhe com o service account.")
+    sh = client.open_by_key(SPREADSHEET_ID)
+    sheet = sh.sheet1  # pega a primeira aba da planilha
+except Exception as e:
+    st.error("⚠️ Não foi possível abrir a planilha pelo ID. Verifique se foi compartilhada corretamente com o service account.")
     st.stop()
 
 # ==============================
@@ -34,27 +37,27 @@ def load_reminders():
     today = datetime.date.today()
     for r in rows:
         try:
-            date = datetime.date.fromisoformat(r["date"])
-            if date < today - datetime.timedelta(days=10):
-                # Apaga lembretes muito antigos
-                delete_reminder(r["id"])
-                continue
-            reminders.append(r)
+            date_obj = datetime.date.fromisoformat(r["date"])
         except Exception:
             continue
+        if date_obj < today - datetime.timedelta(days=10):
+            delete_reminder(r["id"])
+            continue
+        reminders.append(r)
     return reminders
 
-def add_reminder(title, description, date, created_by, color):
+def add_reminder(title, description, date_obj, created_by, color):
     """Adiciona novo lembrete"""
     new_id = str(datetime.datetime.now().timestamp())
-    sheet.append_row([new_id, title, description, date.isoformat(), created_by, color])
+    sheet.append_row([new_id, title, description, date_obj.isoformat(), created_by, color])
 
 def delete_reminder(reminder_id):
     """Deleta lembrete pelo ID"""
-    data = sheet.get_all_values()
-    for i, row in enumerate(data):
-        if row and row[0] == reminder_id:
-            sheet.delete_rows(i + 1)
+    all_values = sheet.get_all_values()
+    for idx, row in enumerate(all_values, start=1):
+        # row[0] é a coluna ID
+        if len(row) > 0 and row[0] == reminder_id:
+            sheet.delete_rows(idx)
             break
 
 def get_reminders_for_day(reminders, day):
@@ -66,7 +69,7 @@ def get_reminders_for_day(reminders, day):
 # ==============================
 st.title("📆 Calendário de Lembretes")
 
-# Usuário
+# Usuário e cor
 user = st.text_input("Seu nome:", "Anônimo")
 color = st.color_picker("Escolha sua cor para marcar os dias:", "#FF0000")
 
@@ -74,10 +77,10 @@ color = st.color_picker("Escolha sua cor para marcar os dias:", "#FF0000")
 with st.form("new_reminder", clear_on_submit=True):
     title = st.text_input("Título")
     description = st.text_area("Descrição")
-    date = st.date_input("Data", min_value=datetime.date.today())
+    date_input = st.date_input("Data", min_value=datetime.date.today())
     submitted = st.form_submit_button("➕ Adicionar")
     if submitted and title:
-        add_reminder(title, description, date, user, color)
+        add_reminder(title, description, date_input, user, color)
         st.success("✅ Lembrete adicionado!")
 
 # Carregar lembretes
@@ -87,34 +90,41 @@ reminders = load_reminders()
 today = datetime.date.today()
 year, month = today.year, today.month
 cal = calendar.Calendar(firstweekday=0)
-month_days = cal.itermonthdates(year, month)
+month_days = cal.monthdatescalendar(year, month)
 
 st.subheader(f"{calendar.month_name[month]} {year}")
-cols = st.columns(7)
 weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-
-# Cabeçalho
+cols = st.columns(7)
 for i, wd in enumerate(weekdays):
     cols[i].markdown(f"**{wd}**")
 
-# Dias
-for week in calendar.monthcalendar(year, month):
+for week in month_days:
     cols = st.columns(7)
     for i, day in enumerate(week):
-        if day == 0:
-            cols[i].write(" ")
-            continue
-        date = datetime.date(year, month, day)
-        day_reminders = get_reminders_for_day(reminders, date)
-        
-        if day_reminders:
-            # Escolhe cor do primeiro lembrete do dia (poderia ser várias cores em stack)
-            bg_color = day_reminders[0]["color"]
-            btn_label = f"📌 {day}"
-            if cols[i].button(btn_label, key=f"{date}"):
-                st.sidebar.subheader(f"Lembretes em {date}")
-                for r in day_reminders:
-                    st.sidebar.write(f"**{r['title']}** - {r['description']} (por {r['created_by']})")
-        else:
-            cols[i].write(str(day))
+        with cols[i]:
+            if day.month != month:
+                st.markdown(f"<div style='opacity:0.3'>{day.day}</div>", unsafe_allow_html=True)
+            else:
+                # se há lembretes naquele dia
+                day_reminders = get_reminders_for_day(reminders, day)
+                if day_reminders:
+                    # usar a cor do primeiro lembrete desse dia
+                    bg = day_reminders[0]["color"]
+                    style = f"background:{bg}; padding:4px; border-radius:6px; text-align:center;"
+                    if day == today:
+                        style += " border:2px solid #000;"  # destaque extra para hoje
+                    st.markdown(f"<div style='{style}'><b>{day.day}</b></div>", unsafe_allow_html=True)
 
+                    # Ao clicar no dia
+                    if st.button(f"Ver {day}", key=f"btn-{day}"):
+                        st.sidebar.header(f"Lembretes de {day}")
+                        for r in day_reminders:
+                            st.sidebar.markdown(f"**{r['title']}** — {r['description']} _(por {r['created_by']})_")
+                else:
+                    # dia sem lembrete
+                    style = ""
+                    if day == today:
+                        style = "background:#ffd966; padding:4px; border-radius:6px; text-align:center;"
+                        st.markdown(f"<div style='{style}'><b>{day.day}</b></div>", unsafe_allow_html=True)
+                    else:
+                        st.write(day.day)
