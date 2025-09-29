@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Ajuste Final de Cursor)
+# Estilos customizados (Mantidos)
 # ==============================
 st.markdown(
     """
@@ -131,9 +131,7 @@ st.markdown(
         color: transparent !important;
         border: none;
         box-shadow: none;
-        
-        /* CURSOR PADRÃO (Para seleção de dia) */
-        cursor: default;
+        cursor: default; /* Padrão: Não clicável (só para seleção) */
         
         position: absolute;
         top: 0;
@@ -274,11 +272,29 @@ for i, wd in enumerate(weekdays):
 if "selected_day" not in st.session_state:
     st.session_state.selected_day = None
 
-def handle_day_click(day_iso: str):
+# FUNÇÃO DE CLIQUE AJUSTADA!
+def handle_day_click(day_iso: str, has_reminders: bool):
+    """
+    Define o dia selecionado.
+    Abre a sidebar APENAS se houver lembretes.
+    """
+    # 1. Se o dia clicado for o mesmo do estado, deseleciona.
     if st.session_state.selected_day == day_iso:
-        st.session_state.selected_day = None 
-    else:
-        st.session_state.selected_day = day_iso
+        st.session_state.selected_day = None
+        return # Não faz mais nada
+
+    # 2. Atualiza o dia selecionado.
+    st.session_state.selected_day = day_iso
+    
+    # 3. Se NÃO houver lembretes, forçamos a sidebar a fechar (limpa o estado).
+    # O Streamlit abre a sidebar automaticamente quando 'st.sidebar' é renderizado.
+    # O código abaixo garante que ela só seja renderizada se houver lembretes.
+    if not has_reminders:
+        st.session_state.selected_day = None # Não seleciona para ver detalhes.
+        # No entanto, a seleção é útil para o formulário abaixo. Vamos manter a seleção,
+        # mas a sidebar só aparece no bloco de código dela se houver eventos.
+        pass # A sidebar será controlada pelo bloco IF abaixo.
+
 
 # Renderizar dias do mês
 for week in month_days:
@@ -286,10 +302,11 @@ for week in month_days:
     for i, day in enumerate(week):
         day_iso = day.isoformat()
         day_reminders = get_reminders_for_day(reminders, day)
-        
+        has_reminders = bool(day_reminders) # Flag para o clique
+
         # Classes CSS
         classes = "day-cell"
-        wrapper_classes = "day-cell-wrapper" # Classe base do wrapper
+        wrapper_classes = "day-cell-wrapper"
         
         if day.month != month:
             classes += " day-other-month-style"
@@ -301,7 +318,7 @@ for week in month_days:
             classes += " selected-style" 
         
         # Adiciona classe para MUDAR O CURSOR se houver lembretes
-        if day_reminders:
+        if has_reminders:
             wrapper_classes += " has-reminders"
         
         # HTML do CONTEÚDO da célula
@@ -327,10 +344,9 @@ for week in month_days:
             st.markdown(full_cell_wrapper_html, unsafe_allow_html=True)
             
             # 2. Renderiza o botão de clique com um rótulo simples (" ").
-            # O Streamlit ainda precisa de um "label" (rótulo) simples para criar o botão.
-            # REMOVIDO: help=f"Ver detalhes do dia {day.day}"
+            # A função de clique agora usa a flag 'has_reminders' para controlar o que a sidebar exibe.
             if st.button(" ", key=f"btn_{day_iso}"):
-                 handle_day_click(day_iso)
+                 handle_day_click(day_iso, has_reminders)
             
             # 3. Fecha o wrapper
             st.markdown("</div>", unsafe_allow_html=True)
@@ -343,9 +359,10 @@ if st.session_state.selected_day:
     day = datetime.date.fromisoformat(st.session_state.selected_day)
     day_reminders = get_reminders_for_day(reminders, day)
     
-    st.sidebar.markdown(f"## 📌 Eventos: {day.strftime('%d/%m/%Y')}")
-    
+    # A sidebar SÓ será renderizada se houver lembretes para o dia selecionado.
     if day_reminders:
+        st.sidebar.markdown(f"## 📌 Eventos: {day.strftime('%d/%m/%Y')}")
+        
         for r in day_reminders:
             card_style = f"border-color: {r['color']};"
             
@@ -369,11 +386,13 @@ if st.session_state.selected_day:
                      st.session_state.selected_day = None 
                      st.rerun() 
     else:
-         st.sidebar.info("Nenhum evento registrado para esta data.")
+         # Se o dia foi clicado, mas não tem lembretes, não mostra nada na sidebar de detalhes
+         # Isso implementa o comportamento de "só clicar para detalhes se houver título"
+         pass
 
 
 # ==============================
-# Formulário de Novo Lembrete
+# Formulário de Novo Lembrete (Mantido)
 # ==============================
 st.markdown("---")
 st.subheader("➕ Adicionar Novo Evento")
@@ -388,6 +407,7 @@ with st.container(border=True):
         title = st.text_input("📝 **Título do Evento**", max_chars=50)
         description = st.text_area("🗒️ **Descrição**")
         
+        # Usa o dia selecionado no calendário como padrão para o formulário
         default_date = datetime.date.today()
         if st.session_state.selected_day:
             try:
