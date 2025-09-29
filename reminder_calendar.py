@@ -34,11 +34,19 @@ st.markdown(
     }
 
     /* Células quadradas com grade */
+    .day-cell-container {
+        position: relative; /* Pai para posicionar o botão absoluto */
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        margin: 0 auto;
+        padding: 0;
+    }
+
     .day-cell {
         border: 1px solid #e5e7eb;
         border-radius: 8px; /* Mais arredondado */
-        width: 100%; /* Ocupa a coluna */
-        aspect-ratio: 1 / 1; /* Força o formato quadrado */
+        width: 100%; 
+        height: 100%;
         text-align: center;
         transition: all 0.3s ease;
         font-size: 12px;
@@ -46,26 +54,8 @@ st.markdown(
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        margin: 0 auto;
         padding: 4px;
-        cursor: pointer;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra suave */
-    }
-    .day-cell:hover {
-        background: #f0f4f8 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    /* Botões do Streamlit (para cliques nas células) */
-    .stButton>button {
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        margin: 0;
-        background: none;
-        border: none;
-        box-shadow: none;
     }
 
     /* Dia atual */
@@ -102,9 +92,29 @@ st.markdown(
         text-shadow: 0 0 1px rgba(0,0,0,0.3);
     }
     
+    /* Botão transparente sobre a célula */
+    .stButton>button {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        background: transparent !important; /* Torna o botão invisível */
+        color: transparent !important;
+        border: none;
+        box-shadow: none;
+        cursor: pointer;
+        z-index: 10; /* Garante que está acima do HTML */
+    }
+    .stButton>button:hover {
+        background: rgba(0,0,0,0.05) !important; /* Efeito de hover */
+    }
+
     /* Sidebar aprimorada */
     section[data-testid="stSidebar"] {
-        background: #ffffff; /* Fundo claro para a sidebar */
+        background: #ffffff; 
         color: #1f2937;
         border-right: 1px solid #e5e7eb;
         box-shadow: 2px 0 5px rgba(0,0,0,0.05);
@@ -122,7 +132,7 @@ st.markdown(
         border-radius: 8px;
         font-size: 13px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 5px solid; /* Usado para cor */
+        border-left: 5px solid; 
     }
     
     .st-emotion-cache-1n76cwh a{
@@ -148,7 +158,8 @@ def get_gspread_client():
         SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
         return client.open_by_key(SPREADSHEET_ID).sheet1
     except Exception as e:
-        st.error(f"Erro ao conectar com o Google Sheets: {e}")
+        # st.error(f"Erro ao conectar com o Google Sheets: {e}")
+        st.error("Erro ao conectar com o Google Sheets. Verifique o arquivo `secrets.toml`.")
         st.stop()
 
 sheet = get_gspread_client()
@@ -163,11 +174,9 @@ def load_reminders() -> List[Dict[str, Any]]:
     reminders = []
     today = datetime.date.today()
     
-    # Prepara uma lista de IDs para exclusão
     ids_to_delete = []
 
     for r in rows:
-        # Garante que todos os campos necessários estão presentes
         required_keys = ["id","title","description","date","created_by","color"]
         if not all(k in r for k in required_keys):
             continue
@@ -177,18 +186,17 @@ def load_reminders() -> List[Dict[str, Any]]:
         except ValueError:
             continue
             
-        # Exclui lembretes com mais de 10 dias no passado
         if date_obj < today - datetime.timedelta(days=10):
             ids_to_delete.append(r["id"])
             continue
             
         reminders.append(r)
 
-    # Exclui em lote (se suportado pelo gspread, ou um por um)
-    # Por simplicidade, vamos usar a função existente (que não é ideal, mas funciona)
-    # Em um app de produção, uma solução de exclusão em lote seria melhor.
+    # Exclusão em lote (chamando a função individualmente)
     for reminder_id in ids_to_delete:
-        delete_reminder(reminder_id, force_update=False) # Não força update do cache aqui
+        # Chamamos com force_update=False para evitar limpar o cache 
+        # a cada exclusão no loop de carregamento
+        delete_reminder(reminder_id, force_update=False) 
 
     return reminders
 
@@ -275,7 +283,7 @@ def handle_day_click(day_iso: str):
     else:
         st.session_state.selected_day = day_iso
 
-# Renderizar dias do mês
+# Renderizar dias do mês (BLOCO CORRIGIDO)
 for week in month_days:
     cols = st.columns(7, gap="small")
     for i, day in enumerate(week):
@@ -292,27 +300,42 @@ for week in month_days:
         if day == today:
             classes += " today"
         
+        # Estilo de seleção visual
         if day_iso == st.session_state.selected_day:
-            cell_style = "border: 2px solid #ff4b4b; background-color: #ffe0e0;" # Estilo de seleção
+            cell_style = "border: 2px solid #ff4b4b; background-color: #ffe0e0;" 
         
-        # HTML do dia
-        html = f"<div class='{classes}' style='{cell_style}'>"
-        html += f"<div class='day-number'>{day.day}</div>"
+        # HTML do CONTEÚDO da célula
+        content_html = f"<div class='day-number'>{day.day}</div>"
 
         # Títulos dos lembretes (máx 2)
         for r in day_reminders[:2]:
-            html += f"<div class='reminder-title' style='background-color:{r['color']}'>{r['title']}</div>"
+            content_html += f"<div class='reminder-title' style='background-color:{r['color']}'>{r['title']}</div>"
             
         if len(day_reminders) > 2:
-            html += f"<div class='reminder-title' style='background-color:#ccc; color:#333 !important;'>+{len(day_reminders)-2}</div>"
+            content_html += f"<div class='reminder-title' style='background-color:#ccc; color:#333 !important;'>+{len(day_reminders)-2}</div>"
 
-        html += "</div>"
+        # HTML COMPLETO da célula (o visual)
+        full_cell_html = f"""
+        <div class='day-cell-container'>
+            <div class='{classes}' style='{cell_style}'>
+                {content_html}
+            </div>
+        """
+        # Note que o </div> final será fechado pelo Streamlit/HTML
         
-        # Renderiza o container com o HTML, usando um botão transparente para clique
         with cols[i]:
-            # st.button é usado para capturar o clique
-            if st.button(html, key=f"btn_{day_iso}", help=f"Ver detalhes de {day}", unsafe_allow_html=True):
+            # 1. Renderiza a célula visualmente com st.markdown.
+            # (Adicionado um placeholder de div para auxiliar o CSS)
+            st.markdown(full_cell_html, unsafe_allow_html=True)
+            
+            # 2. Renderiza um botão de espaço vazio (" ") que usa o CSS 
+            # '.stButton>button' para cobrir a célula e ser clicável,
+            # resolvendo o TypeError.
+            if st.button(" ", key=f"btn_{day_iso}", help=f"Ver detalhes de {day}"):
                  handle_day_click(day_iso)
+            
+            # Fechando o day-cell-container (feito com um markdown vazio)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
@@ -326,7 +349,6 @@ if st.session_state.selected_day:
     
     if day_reminders:
         for r in day_reminders:
-            # Usa o border-left para mostrar a cor do evento
             card_style = f"border-color: {r['color']};"
             st.sidebar.markdown(
                 f"""
@@ -335,29 +357,17 @@ if st.session_state.selected_day:
                     <p style='margin: 4px 0 6px 0;'><small>{r['description'] or 'Sem descrição'}</small></p>
                     <hr style='margin: 4px 0; border-top: 1px solid #eee;'>
                     <small>Criado por: <i>{r['created_by']}</i></small>
-                    <div style='text-align: right; margin-top: 5px;'>
-                        <a href="#" onclick="window.parent.postMessage('streamlit:delete_reminder:{r['id']}', '*')" title="Excluir" style="color: #ff4b4b; text-decoration: none;">🗑️</a>
-                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
             
-            # Adiciona um placeholder para o botão de exclusão
-            # **NOTA:** Streamlit não permite botões na sidebar que alteram o estado sem truques.
-            # O link acima é um "placeholder" visual. Para a exclusão funcionar, precisaria de:
-            # 1. Um formulário (st.form) ou uma forma de recarregar a página/estado.
-            # 2. Um botão real com a lógica `delete_reminder(r["id"])`.
-            # Exemplo de botão funcional (mas que não se encaixa bem no visual do card):
-            # if st.sidebar.button("Excluir", key=f"del_{r['id']}"):
-            #     delete_reminder(r["id"])
-            #     st.rerun() # Força a atualização após a exclusão
-            
-            # Vamos usar o botão real com um design compacto
+            # Botão de exclusão funcional.
             delete_col, _ = st.sidebar.columns([1, 4])
-            if delete_col.button("🗑️", key=f"del_{r['id']}", help="Excluir Lembrete"):
+            if delete_col.button("🗑️ Excluir", key=f"del_{r['id']}", help="Excluir Lembrete Permanentemente"):
                  delete_reminder(r["id"])
-                 st.rerun() # Necessário para recarregar o estado após a mudança
+                 st.session_state.selected_day = None # Limpa a seleção
+                 st.rerun() 
     else:
          st.sidebar.info("Nenhum evento registrado para esta data.")
 
@@ -368,21 +378,22 @@ if st.session_state.selected_day:
 st.markdown("---")
 st.subheader("➕ Adicionar Novo Evento")
 
-# Usa um container para o formulário para melhor organização
 with st.container(border=True):
     col_user, col_color = st.columns([2, 1])
     
     user = col_user.text_input("👤 **Seu Nome**", "Anônimo")
-    color = col_color.color_picker("🎨 **Cor do Evento**", "#4b89dc") # Cor padrão mais profissional
+    color = col_color.color_picker("🎨 **Cor do Evento**", "#4b89dc") 
 
     with st.form("new_reminder", clear_on_submit=True):
         title = st.text_input("📝 **Título do Evento**", max_chars=50)
         description = st.text_area("🗒️ **Descrição**")
         
-        # Define a data inicial para o dia selecionado, se houver
         default_date = datetime.date.today()
         if st.session_state.selected_day:
-            default_date = datetime.date.fromisoformat(st.session_state.selected_day)
+            try:
+                default_date = datetime.date.fromisoformat(st.session_state.selected_day)
+            except ValueError:
+                pass
             
         date_input = st.date_input("🗓️ **Data**", 
                                    value=default_date, 
@@ -395,5 +406,5 @@ with st.container(border=True):
                 st.error("O **Título** é obrigatório!")
             else:
                 add_reminder(title, description, date_input, user, color)
-                st.success("🎉 Evento adicionado com sucesso! Recarregando...")
-                st.rerun() # Força a atualização para mostrar o novo lembrete no calendário
+                st.success("🎉 Evento adicionado com sucesso! Atualizando o calendário...")
+                st.rerun()
