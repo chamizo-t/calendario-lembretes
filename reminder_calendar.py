@@ -11,8 +11,8 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (Ajuste de Altura e Layout da Célula)
-# ==========================================================
+# Estilos customizados (Mantidos)
+# ==============================
 st.markdown(
     """
     <style>
@@ -48,12 +48,10 @@ st.markdown(
     }
 
     /* --- CALENDÁRIO GERAL --- */
-    /* Garante que o container da coluna tenha um aspecto quadrado */
     div[data-testid^="stHorizontalBlock"] > div {
         display: flex;
         flex-direction: column;
         padding: 0 4px !important;
-        /* Estilos removidos daqui e movidos para o .day-cell-wrapper */
     }
 
     /* Contêiner da célula do dia (Borda e Fundo) */
@@ -82,7 +80,7 @@ st.markdown(
     .day-number-container {
         font-weight: bold;
         font-size: 14px; 
-        margin-bottom: 2px; /* Reduz margem */
+        margin-bottom: 2px;
         color: #1f2937;
         padding: 1px; 
         line-height: 1.4;
@@ -106,12 +104,12 @@ st.markdown(
     /* --- BOTÃO INDIVIDUAL DE TÍTULO --- */
     /* Container do botão st.button dentro da célula */
     .day-cell-wrapper div[data-testid="stButton"] {
-        margin: 1px 0 0 0 !important; /* Reduz margem externa */
+        margin: 1px 0 0 0 !important;
         width: 100%;
         display: flex; 
         justify-content: center;
         transition: all 0.2s;
-        min-height: 0; /* IMPEDE A ALTURA MÍNIMA PADRÃO */
+        min-height: 0; 
     }
     
     /* Botão em si (Estilo do Título) */
@@ -130,7 +128,7 @@ st.markdown(
         cursor: pointer;
         line-height: 1.4;
         transition: transform 0.1s;
-        min-height: 20px; /* GARANTE ALTURA MÍNIMA PARA O CLIQUE, mas sem estourar */
+        min-height: 20px; 
         height: auto;
     }
     
@@ -288,6 +286,7 @@ for week in month_days:
     for i, day in enumerate(week):
         day_iso = day.isoformat()
         day_reminders = get_reminders_for_day(reminders, day)
+        has_reminders = bool(day_reminders) # Variável definida aqui
         
         # Classes CSS
         classes = "day-cell-wrapper"
@@ -316,7 +315,7 @@ for week in month_days:
                 ):
                     handle_reminder_click(day_iso)
                 
-                # Aplica a cor de fundo e a classe de estilo via CSS injetado
+                # Aplica a cor de fundo e a classe de estilo via CSS e Script injetado
                 st.markdown(
                     f"""
                     <style>
@@ -325,13 +324,17 @@ for week in month_days:
                         background-color: {r['color']} !important;
                     }}
                     </style>
+                    <script>
+                    // Adiciona a classe de estilo 'reminder-title-btn'
+                    setTimeout(() => {{
+                        const btn = window.document.querySelector('button[data-testid*="{btn_key}"]');
+                        if(btn) {{
+                            btn.classList.add('reminder-title-btn');
+                        }}
+                    }}, 10);
+                    </script>
                     """, unsafe_allow_html=True
                 )
-                
-                # Adiciona a classe de estilo (requer script/markdown adicional)
-                # O método mais limpo é tentar aplicar a classe via script, mas o Streamlit pode barrar.
-                # Para garantir o visual, usamos um truque de CSS no bloco principal.
-
                 
             # Renderiza o contador de mais eventos
             if len(day_reminders) > 2:
@@ -347,25 +350,6 @@ for week in month_days:
             
             # Fechamento do div .day-cell-wrapper
             st.markdown("</div>", unsafe_allow_html=True)
-            
-            # Correção de layout: Adiciona a classe de estilo ao botão após sua renderização
-            # Isso é necessário porque o Streamlit não permite aplicar classes a botões nativamente.
-            if has_reminders:
-                for r in day_reminders[:2]:
-                    btn_key = f"title_btn_{r['id']}_{day_iso}"
-                    st.markdown(
-                        f"""
-                        <script>
-                        // Atraso para garantir que o elemento exista no DOM
-                        setTimeout(() => {{
-                            const btn = window.document.querySelector('button[data-testid*="{btn_key}"]');
-                            if(btn) {{
-                                btn.classList.add('reminder-title-btn');
-                            }}
-                        }}, 10);
-                        </script>
-                        """, unsafe_allow_html=True
-                    )
 
 
 # ==============================
