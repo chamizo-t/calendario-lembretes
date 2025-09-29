@@ -26,7 +26,8 @@ def get_gspread_client():
     try:
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         client = gspread.authorize(creds)
-        SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
+        # Substitua pelo ID real da sua planilha
+        SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM" 
         return client.open_by_key(SPREADSHEET_ID).sheet1
     except Exception as e:
         st.error(f"Erro ao conectar com o Google Sheets: {e}")
@@ -83,15 +84,14 @@ def get_reminders_for_day(reminders: List[Dict], day: datetime.date) -> List[Dic
 st.markdown(
     """
     <style>
-    /* Estilos globais e Sidebar (Mantidos) */
+    /* Estilos globais e Sidebar */
     body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
     h1, h2, h3 { text-align: center; color: #1f2937; }
     
     section[data-testid="stSidebar"] { background: #2c3e50; color: white; border-right: 1px solid #1a252f; box-shadow: 2px 0 5px rgba(0,0,0,0.15); }
     section[data-testid="stSidebar"] * { color: white; }
     section[data-testid="stSidebar"] div.reminder-card { padding: 10px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border-left: 5px solid; background-color: #34495e; }
-    section[data-testid="stSidebar"] .stButton button { background: #e74c3c !important; color: white !important; border-radius: 5px; padding: 4px 8px; font-size: 11px; line-height: 1; transition: background 0.2s; width: auto !important; }
-
+    
     /* --- CALENDÁRIO GERAL --- */
     div[data-testid^="stHorizontalBlock"] > div { display: flex; flex-direction: column; padding: 0 4px !important; }
 
@@ -110,85 +110,92 @@ st.markdown(
         transition: all 0.2s;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        overflow: hidden; /* Importante para a faixa */
+        overflow: hidden; 
     }
     
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; border-color: #f0f0f0 !important; }
 
-    /* Número do dia - Centralizado no topo */
+    /* Número do dia - NOVO: Canto Superior Esquerdo */
     .day-number-container {
+        position: absolute; /* Posição absoluta dentro do wrapper */
+        top: 0px; 
+        left: 0px;
         font-weight: bold;
         font-size: 14px; 
         color: #1f2937;
-        padding: 1px 0; 
+        padding: 4px 6px; 
         line-height: 1.4;
-        text-align: center;
-        width: 100%;
-        flex-shrink: 0;
-        margin-bottom: 2px;
+        z-index: 2;
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
+    /* Indicador de dia de hoje */
     .today-style .day-number-container > span {
         color: #4b89dc !important;
-        border: 2px solid #4b89dc; 
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        /* Remove o círculo azul, deixando só o número */
     }
 
-    /* --- FAIXA DE SELEÇÃO (NOVO ESTILO) --- */
-    .selected-strip {
+    /* --- FAIXA DE EVENTO (NOVO) --- */
+    .reminder-strip {
         position: absolute;
-        bottom: 0;
+        bottom: 25px; /* Posição acima do botão Detalhes */
         left: 0;
         width: 100%;
-        height: 25%; /* Altura da faixa */
+        height: 20px; 
         padding: 2px 4px;
         color: white;
         font-size: 10px;
         font-weight: 600;
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         text-shadow: 0 0 1px rgba(0,0,0,0.5);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        z-index: 3; /* Acima do wrapper */
     }
-    .selected-strip-title {
+    .reminder-strip-title {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 80%;
-        flex-grow: 1;
-    }
-    .selected-strip-icon {
-        font-size: 14px;
-        cursor: pointer;
-        padding-left: 4px;
-        line-height: 1;
-    }
-    .day-cell-wrapper.selected-style {
-        /* Remove a borda vermelha e usa a faixa colorida */
-        border: 2px solid #ddd;
-        background-color: #f5f5f5 !important;
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        z-index: 5;
+        max-width: 95%;
     }
     
-    /* --- BOTÃO INDIVIDUAL DE TÍTULO (Estilo mantido para não selecionado) --- */
-    .day-cell-wrapper div[data-testid="stButton"] { margin: 1px 0 0 0 !important; width: 100%; display: flex; justify-content: center; transition: all 0.2s; min-height: 0; }
-    .day-cell-wrapper button.reminder-title-btn {
-        font-size: 10px; padding: 1px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; 
-        font-weight: 500; color: white !important; text-shadow: 0 0 1px rgba(0,0,0,0.3); border: none !important; cursor: pointer; line-height: 1.4; transition: transform 0.1s; min-height: 20px; height: auto;
+    /* --- BOTÃO DETALHES (NOVO) --- */
+    /* Container do botão st.button */
+    .day-cell-wrapper div[data-testid="stButton"] {
+        position: absolute;
+        bottom: 0px;
+        left: 0;
+        width: 100%;
+        margin: 0 !important;
+        padding: 0 4px 4px 4px; /* Padding apenas em cima e nas laterais */
+        z-index: 4;
     }
-    .day-cell-wrapper button.reminder-title-btn:hover { transform: scale(1.05); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
-    .day-cell-wrapper .more-reminders { font-size: 10px; margin-top: 2px; padding: 1px 4px; border-radius: 3px; background-color:#ccc; color:#333; font-weight: 500; text-align: center; width: fit-content; line-height: 1.4; }
-
-    .st-emotion-cache-1n76cwh a{ display: none !important; }
+    
+    /* Botão em si */
+    .day-cell-wrapper button.details-btn {
+        font-size: 10px;
+        padding: 1px 4px;
+        border-radius: 4px;
+        font-weight: 500;
+        background-color: #f0f0f0 !important;
+        color: #333 !important; 
+        border: 1px solid #ccc !important;
+        transition: all 0.2s;
+        height: 20px; 
+        line-height: 1;
+        width: 100%;
+    }
+    .day-cell-wrapper button.details-btn:hover {
+        background-color: #e0e0e0 !important;
+    }
+    .selected-day-style {
+        border: 2px solid #ff4b4b !important;
+        background-color: #ffe0e0 !important;
+    }
+    
     </style>
     """,
     unsafe_allow_html=True
@@ -241,8 +248,8 @@ week_cols = st.columns(7, gap="small")
 for i, wd in enumerate(weekdays):
     week_cols[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #4b89dc;'>{wd}</div>", unsafe_allow_html=True)
 
-# Lógica de clique (acionada pelo botão do título ou pelo ícone '?')
-def handle_reminder_click(day_iso: str):
+# Lógica de clique para abrir/fechar a sidebar
+def handle_details_click(day_iso: str):
     """Define o dia selecionado e abre a sidebar."""
     if st.session_state.selected_day == day_iso:
         st.session_state.selected_day = None # Desselecionar
@@ -256,109 +263,63 @@ for week in month_days:
     for i, day in enumerate(week):
         day_iso = day.isoformat()
         day_reminders = get_reminders_for_day(reminders, day)
-        has_reminders = bool(day_reminders)
         
         # Classes CSS
         classes = "day-cell-wrapper"
         if day.month != month: classes += " day-other-month-style"
         if day == today: classes += " today-style"
-        
-        # AQUI: Se o dia estiver selecionado, usamos a classe SELECTED_STYLE
-        if day_iso == st.session_state.selected_day: classes += " selected-style" 
+        # Adiciona a classe de estilo de seleção (borda) se estiver selecionado
+        if day_iso == st.session_state.selected_day: classes += " selected-day-style"
         
         with cols[i]:
             st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
             
-            # Renderiza o número do dia (centralizado no topo)
+            # 1. Número do dia (Posição absoluta no canto)
             st.markdown(f"<div class='day-number-container'><span>{day.day}</span></div>", unsafe_allow_html=True)
 
-            # Renderiza o TÍTULO como um BOTÃO (máx 1 se selecionado, máx 2 se não)
+            # 2. Faixa de Evento e Botão Detalhes (só se houverem lembretes)
+            if day_reminders:
+                # Usa o primeiro lembrete para a cor e o título na faixa
+                first_reminder = day_reminders[0]
+                strip_color = first_reminder['color']
+                strip_title = first_reminder['title']
+                
+                # Se houver mais de um, adiciona um contador
+                if len(day_reminders) > 1:
+                    strip_title += f" (+{len(day_reminders)-1})"
+                
+                # Injeta a faixa colorida (posição absoluta)
+                st.markdown(
+                    f"""
+                    <div class="reminder-strip" style="background-color: {strip_color};">
+                        <span class="reminder-strip-title">{strip_title}</span>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+                
+                # 3. Botão Detalhes
+                btn_key_details = f"details_btn_{day_iso}"
+                if st.button("Detalhes", key=btn_key_details, use_container_width=True):
+                    handle_details_click(day_iso)
+                
+                # Injeta a classe CSS personalizada no botão "Detalhes"
+                st.markdown(
+                    f"""
+                    <script>
+                    setTimeout(() => {{
+                        const btn = window.document.querySelector('button[data-testid*="{btn_key_details}"]');
+                        if(btn) {{ btn.classList.add('details-btn'); }}
+                    }}, 10);
+                    </script>
+                    """, unsafe_allow_html=True
+                )
             
-            # 1. Se o dia NÃO estiver selecionado (mostra títulos em formato de botões)
-            if day_iso != st.session_state.selected_day:
-                for r in day_reminders[:2]:
-                    btn_label = f"**{r['title']}**"
-                    btn_key = f"title_btn_{r['id']}_{day_iso}"
-                    
-                    if st.button(btn_label, key=btn_key, use_container_width=True, help=f"Ver detalhes de: {r['title']}"):
-                        handle_reminder_click(day_iso)
-                    
-                    # Aplica a cor de fundo e a classe de estilo via CSS e Script injetado
-                    st.markdown(
-                        f"""
-                        <style>
-                        div[data-testid="stButton"] button[data-testid*="{btn_key}"] {{ background-color: {r['color']} !important; }}
-                        </style>
-                        <script>
-                        setTimeout(() => {{
-                            const btn = window.document.querySelector('button[data-testid*="{btn_key}"]');
-                            if(btn) {{ btn.classList.add('reminder-title-btn'); }}
-                        }}, 10);
-                        </script>
-                        """, unsafe_allow_html=True
-                    )
-                    
-                # Renderiza o contador de mais eventos
-                if len(day_reminders) > 2:
-                    st.markdown(
-                        f"""
-                        <div style='display: flex; justify-content: center;'>
-                            <div class='more-reminders'> +{len(day_reminders)-2} </div>
-                        </div>
-                        """, unsafe_allow_html=True
-                    )
-            
-            # 2. Se o dia ESTIVER selecionado (mostra apenas a faixa colorida)
-            else:
-                if day_reminders:
-                    # Usa o primeiro lembrete para a cor e o título na faixa
-                    first_reminder = day_reminders[0]
-                    strip_color = first_reminder['color']
-                    strip_title = first_reminder['title']
-                    if len(day_reminders) > 1:
-                        strip_title += f" (+{len(day_reminders)-1})"
-                    
-                    # Injeta a faixa colorida e o ícone '?'
-                    st.markdown(
-                        f"""
-                        <div class="selected-strip" style="background-color: {strip_color};">
-                            <span class="selected-strip-title">{strip_title}</span>
-                            <span class="selected-strip-icon">?</span>
-                        </div>
-                        """, unsafe_allow_html=True
-                    )
-                    
-                    # Adiciona um botão invisível para o ícone '?' para re-clicar no dia
-                    # Isso garante que a lógica de deselecionar funcione ao clicar no '?'
-                    btn_key_strip = f"strip_btn_{day_iso}"
-                    if st.button(" ", key=btn_key_strip):
-                        handle_reminder_click(day_iso)
-                    
-                    # CSS para esconder o botão, mas manter o clique (similar ao antigo botão de célula inteira, mas só agora)
-                    st.markdown(
-                        f"""
-                        <style>
-                        div[data-testid="stButton"] button[data-testid*="{btn_key_strip}"] {{
-                            position: absolute;
-                            bottom: 0; 
-                            right: 0;
-                            width: 25px; /* Tamanho do ícone */
-                            height: 25px; /* Altura da faixa */
-                            background: transparent !important;
-                            border: none;
-                            z-index: 10;
-                            cursor: pointer;
-                        }}
-                        </style>
-                        """, unsafe_allow_html=True
-                    )
-                    
             # Fechamento do div .day-cell-wrapper
             st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
-# Sidebar de detalhes (Mantida)
+# Sidebar de detalhes
 # ==============================
 if st.session_state.selected_day:
     day = datetime.date.fromisoformat(st.session_state.selected_day)
