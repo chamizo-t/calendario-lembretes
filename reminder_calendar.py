@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 st.set_page_config(page_title="📆 Calendário de Eventos", layout="centered", initial_sidebar_state="expanded")
 
 # ==============================
-# Estilos customizados (CORREÇÃO DE POSICIONAMENTO DO BOTÃO)
+# Estilos customizados (Ajustado para Botões de Título)
 # ==============================
 st.markdown(
     """
@@ -56,117 +56,84 @@ st.markdown(
         background: #c0392b !important;
     }
 
-    /* --- CALENDÁRIO FIX: Make Streamlit columns relative for absolute button positioning --- */
-    /* Targeta os 7 divs de coluna dentro do row container (o calendário) */
+    /* --- CALENDÁRIO GERAL --- */
     div[data-testid^="stHorizontalBlock"] > div {
-        position: relative; /* ESSENCIAL PARA O POSICIONAMENTO DO BOTÃO */
+        position: relative;
     }
 
-    /* --- CALENDÁRIO VISUAL --- */
     .day-cell-wrapper {
         position: relative; 
         width: 100%;
         aspect-ratio: 1 / 1;
         margin: 0 auto;
-        z-index: 1; /* Abaixo do botão */
-    }
-    
-    .day-cell {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px; 
-        width: 100%; 
-        height: 100%;
-        text-align: center;
-        transition: all 0.3s ease;
         padding: 4px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         background-color: white;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        pointer-events: none; /* Permite que o clique atravesse o visual para o botão */
+        border: 1px solid #e5e7eb;
+        border-radius: 8px; 
     }
-
+    
     .day-other-month-style { opacity: 0.5; background-color: #f7f9fc !important; }
     .selected-style { border: 2px solid #ff4b4b !important; background-color: #ffe0e0 !important; }
 
+    /* Número do dia */
     .day-number-container {
         font-weight: bold;
         font-size: 14px; 
         margin-bottom: 4px;
         color: #1f2937;
         padding: 1px; 
-        transition: all 0.2s;
         line-height: 1.4;
+        text-align: center;
     }
     .day-other-month-style .day-number-container { color: #6b7280; }
     
     .today-style .day-number-container {
-        background-color: transparent !important;
         color: #4b89dc !important;
         border: 2px solid #4b89dc; 
         border-radius: 50%;
         width: 24px;
         height: 24px;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
     }
-
-    .reminder-title {
+    
+    /* --- BOTÃO INDIVIDUAL DE TÍTULO --- */
+    /* Targeta o container do botão st.button para controle de layout */
+    .day-cell-wrapper div[data-testid="stButton"] {
+        margin: 2px 0 0 0 !important;
+        width: 100%;
+        display: flex; /* Para centralizar */
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    /* Targeta o botão em si e aplica estilo de título */
+    .day-cell-wrapper button.reminder-title-btn {
         font-size: 10px;
-        margin-top: 2px;
         padding: 1px 4px;
         border-radius: 3px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 90%;
+        max-width: 90%; 
         font-weight: 500;
         color: white !important; 
         text-shadow: 0 0 1px rgba(0,0,0,0.3);
-    }
-    
-    /* --- BOTÃO CLICÁVEL (Invisível) --- */
-    .stButton>button {
-        background: transparent !important; 
-        color: transparent !important;
-        border: none;
-        box-shadow: none;
-        cursor: default; 
-        
-        position: absolute; /* ESSENCIAL */
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        margin: 0;
-        z-index: 10; /* Fica por cima do conteúdo visual */
-        transition: all 0.2s;
-    }
-
-    /* Mudar cursor somente se tiver lembretes */
-    .day-cell-wrapper.has-reminders + div[data-testid="stButton"] > button {
+        border: none !important;
         cursor: pointer;
+        line-height: 1.4;
+        transition: transform 0.1s;
     }
     
-    /* Efeito de hover */
-    .day-cell-wrapper.has-reminders + div[data-testid="stButton"] > button:hover {
-        /* Remove o hover do botão, para deixar o efeito visual do wrapper */
-        transform: none; 
-        box-shadow: none;
-        background: transparent !important;
-    }
-    
-    /* Hover do wrapper visual */
-    .day-cell-wrapper.has-reminders:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        background: rgba(75, 137, 220, 0.1) !important;
+    /* Efeito de hover no botão do título */
+    .day-cell-wrapper button.reminder-title-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
 
+    /* Ocultar link 'st-emotion-cache-1n76cwh' (se houver) */
     .st-emotion-cache-1n76cwh a{ display: none !important; }
     </style>
     """,
@@ -182,20 +149,13 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 def get_gspread_client():
     """Autoriza e retorna o cliente gspread."""
     try:
-        # Tenta usar o secret
         creds_dict = st.secrets["gcp_service_account"]
-    except KeyError:
-        # Se não houver, assume que está em ambiente local ou que o secret é passado de outra forma
-        st.error("O secret 'gcp_service_account' não foi encontrado. Por favor, configure-o para usar o Google Sheets.")
-        st.stop()
-        
-    try:
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         client = gspread.authorize(creds)
         SPREADSHEET_ID = "1ZZG2JJCQ4-N7Jd34hG2GUWMTPDYcVlGfL6ODTi6GYmM"
         return client.open_by_key(SPREADSHEET_ID).sheet1
     except Exception as e:
-        st.error(f"Erro ao conectar com o Google Sheets: {e}")
+        st.error(f"Erro ao conectar com o Google Sheets. Verifique o arquivo `secrets.toml`: {e}")
         st.stop()
 
 sheet = get_gspread_client()
@@ -255,6 +215,9 @@ today = datetime.date.today()
 if "calendar_view_date" not in st.session_state:
     st.session_state.calendar_view_date = today
 
+if "selected_day" not in st.session_state:
+    st.session_state.selected_day = None
+
 year, month = st.session_state.calendar_view_date.year, st.session_state.calendar_view_date.month
 cal = calendar.Calendar(firstweekday=0) 
 month_days = cal.monthdatescalendar(year, month)
@@ -287,14 +250,11 @@ week_cols = st.columns(7, gap="small")
 for i, wd in enumerate(weekdays):
     week_cols[i].markdown(f"<div style='text-align: center; font-weight: bold; color: #4b89dc;'>{wd}</div>", unsafe_allow_html=True)
 
-if "selected_day" not in st.session_state:
-    st.session_state.selected_day = None
-
-def handle_day_click(day_iso: str, has_reminders: bool):
-    current_selected = st.session_state.selected_day
-
-    if current_selected == day_iso:
-        st.session_state.selected_day = None
+# Lógica de clique (agora acionada pelo botão do título)
+def handle_reminder_click(day_iso: str):
+    """Define o dia selecionado e abre a sidebar."""
+    if st.session_state.selected_day == day_iso:
+        st.session_state.selected_day = None # Desselecionar
     else:
         st.session_state.selected_day = day_iso
 
@@ -305,50 +265,70 @@ for week in month_days:
     for i, day in enumerate(week):
         day_iso = day.isoformat()
         day_reminders = get_reminders_for_day(reminders, day)
-        has_reminders = bool(day_reminders) 
-
+        
         # Classes CSS
-        classes = "day-cell"
-        wrapper_classes = "day-cell-wrapper"
-        
-        if day.month != month:
-            classes += " day-other-month-style"
-            
-        if day == today:
-            classes += " today-style"
-        
-        if day_iso == st.session_state.selected_day:
-            classes += " selected-style" 
-        
-        if has_reminders:
-            wrapper_classes += " has-reminders"
-        
-        # HTML do CONTEÚDO da célula
-        content_html = f"<div class='day-number-container'>{day.day}</div>"
-
-        # Títulos dos lembretes (máx 2)
-        for r in day_reminders[:2]:
-            content_html += f"<div class='reminder-title' style='background-color:{r['color']}'>{r['title']}</div>"
-            
-        if len(day_reminders) > 2:
-            content_html += f"<div class='reminder-title' style='background-color:#ccc; color:#333 !important;'>+{len(day_reminders)-2}</div>"
-
-        # HTML COMPLETO da célula (o wrapper visual)
-        full_cell_wrapper_html = f"""
-        <div class='{wrapper_classes}'>
-            <div class='{classes}'>
-                {content_html}
-            </div>
-        </div>
-        """
+        classes = "day-cell-wrapper"
+        if day.month != month: classes += " day-other-month-style"
+        if day == today: classes += " today-style"
+        if day_iso == st.session_state.selected_day: classes += " selected-style" 
         
         with cols[i]:
-            # 1. Renderiza o botão de clique. (Fica por cima via CSS)
-            if st.button(" ", key=f"btn_{day_iso}"):
-                 handle_day_click(day_iso, has_reminders)
+            st.markdown(f"<div class='{classes}'>", unsafe_allow_html=True)
             
-            # 2. Renderiza o visual da célula.
-            st.markdown(full_cell_wrapper_html, unsafe_allow_html=True)
+            # Renderiza o número do dia
+            st.markdown(f"<div class='day-number-container'>{day.day}</div>", unsafe_allow_html=True)
+
+            # Renderiza o TÍTULO como um BOTÃO (máx 2)
+            for r in day_reminders[:2]:
+                # Usamos um botão Streamlit, estilizado para parecer o título
+                btn_label = f"**{r['title']}**"
+                btn_key = f"title_btn_{r['id']}_{day_iso}"
+                
+                # O style para o botão deve ser aplicado via class e CSS, não inline no label
+                if st.button(
+                    btn_label, 
+                    key=btn_key, 
+                    use_container_width=True, 
+                    help=f"Ver detalhes de: {r['title']}", 
+                    
+                ):
+                    handle_reminder_click(day_iso)
+                
+                # Adiciona o CSS de cor para o botão específico
+                st.markdown(
+                    f"""
+                    <style>
+                    /* Aplica a cor de fundo ao botão usando o ID */
+                    div[data-testid="stButton"] button[data-testid*="{btn_key}"] {{
+                        background-color: {r['color']} !important;
+                    }}
+                    </style>
+                    """, unsafe_allow_html=True
+                )
+                
+                # Adiciona a classe de estilo definida globalmente
+                st.markdown(
+                    f"""
+                    <script>
+                    const btn = window.document.querySelector('[data-testid*="{btn_key}"]');
+                    if(btn) {{
+                        btn.classList.add('reminder-title-btn');
+                    }}
+                    </script>
+                    """, unsafe_allow_html=True
+                )
+                
+            # Renderiza o contador de mais eventos
+            if len(day_reminders) > 2:
+                st.markdown(
+                    f"""
+                    <div style='font-size: 10px; margin-top: 2px; padding: 1px 4px; border-radius: 3px; background-color:#ccc; color:#333; font-weight: 500;'>
+                        +{len(day_reminders)-2}
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================
